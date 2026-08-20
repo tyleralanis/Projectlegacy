@@ -3,6 +3,7 @@ import { applyDelegationAdvance, executeDelegationDepth, prepareDelegationAdvanc
 import { normalizeDelegatedWorld } from './delegationNormalize';
 import { executeSecondarySchoolApplication } from './educationApplicationBridge';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
+import { executeRebalancePolish } from './rebalancePolish';
 import {
   applySupplementalAdvance as applyBaseSupplementalAdvance,
   ceoCandidates,
@@ -33,6 +34,8 @@ export function executeSupplementalDepth(
   action: IntentAction,
   confirmed = false,
 ): ActionResult | null {
+  const rebalance = executeRebalancePolish(source, action);
+  if (rebalance) return rebalance;
   const polished = executeSystemPolishAction(source, action);
   if (polished) return polished;
   const earlyApplication = executeSecondarySchoolApplication(source, action);
