@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { EngineActionButton } from '@/components/EngineActionButton';
 import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { playerAgeYears } from '@/engine/createWorld';
+import { relationshipPortrait } from '@/engine/immersionWorld';
 import { useGame } from '@/state/GameProvider';
 import { AppScreen, Body, Card, Eyebrow, Heading, ProgressBar, SectionHeader, StatusPill } from '@/ui/components';
 import { radius, spacing, useAppTheme } from '@/ui/theme';
@@ -26,6 +27,15 @@ function relationshipStatus(trust: number, affection: number, resentment: number
 
 function ageOf(worldWeek: number, birthWeek: number): number {
   return Math.max(0, Math.floor((worldWeek - birthWeek) / 52));
+}
+
+function weeksAgo(currentWeek: number, week: number): string {
+  const elapsed = Math.max(0, currentWeek - week);
+  if (elapsed === 0) return 'this week';
+  if (elapsed === 1) return 'last week';
+  if (elapsed < 52) return `${elapsed} weeks ago`;
+  const years = Math.floor(elapsed / 52);
+  return `${years} year${years === 1 ? '' : 's'} ago`;
 }
 
 export default function PeopleScreen() {
@@ -61,24 +71,38 @@ export default function PeopleScreen() {
         <Pressable onPress={() => setSelected(null)} style={[styles.back, { backgroundColor: colors.secondary }]}><Text style={[styles.backText, { color: colors.text }]}>‹ People</Text></Pressable>
         <View style={styles.header}><Eyebrow>{definition.icon} {definition.title.toUpperCase()}</Eyebrow><Heading size="large">{definition.title}</Heading><Body secondary>{definition.subtitle}</Body></View>
         <View style={styles.section}>
-          {shown.length === 0 ? <Card><Heading size="small">Nobody here yet</Heading><Body secondary>{age < 18 ? 'School, family, activities, and ordinary life will keep putting new people in your orbit.' : 'The world keeps generating people through school, work, wellness, organizations, family, and ordinary life.'}</Body></Card> : shown.map(({ relationship, person, kind }) => (
-            <Card key={relationship.id}>
-              <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{person.firstName} {person.lastName}</Heading><Body secondary>{kind} · age {ageOf(world.calendar.week, person.birthWeek)} · {relationshipStatus(relationship.trust, relationship.affection, relationship.resentment)}</Body></View><StatusPill tone={person.isAlive ? 'success' : 'neutral'}>{person.isAlive ? 'Around' : 'Remembered'}</StatusPill></View>
-              <View style={styles.metrics}>
-                <View style={styles.metric}><View style={styles.row}><Body>Trust</Body><Body secondary>{Math.round(relationship.trust)}</Body></View><ProgressBar value={relationship.trust} /></View>
-                <View style={styles.metric}><View style={styles.row}><Body>Affection</Body><Body secondary>{Math.round(relationship.affection)}</Body></View><ProgressBar value={relationship.affection} tone="legacy" /></View>
-                <View style={styles.metric}><View style={styles.row}><Body>Resentment</Body><Body secondary>{Math.round(relationship.resentment)}</Body></View><ProgressBar value={relationship.resentment} tone="danger" /></View>
-              </View>
-              {person.isAlive ? <View style={styles.actions}>
-                <EngineActionButton title={age < 13 ? 'Talk' : 'Reach out'} action={{ verb: 'relationship.contact', targetIds: [person.id], parameters: {} }} style={{ flex: 1 }} />
-                <EngineActionButton title="Spend time" action={{ verb: 'relationship.spend_time', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} />
-                {age >= 14 ? <EngineActionButton title="Give $100" action={{ verb: 'relationship.transfer_cash', targetIds: [person.id], parameters: { amountCents: 10_000 } }} style={{ flex: 1 }} /> : null}
-                {age >= 16 && !actor.partnerId && !person.partnerId && !['parent', 'child', 'sibling', 'relative'].includes(kind) ? <EngineActionButton title="Ask out" action={{ verb: 'relationship.date', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} /> : null}
-                {age >= 18 && actor.partnerId === person.id && relationship.kind === 'partner' ? <EngineActionButton title="Propose" action={{ verb: 'relationship.propose', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} /> : null}
-                {age >= 16 && actor.partnerId === person.id ? <EngineActionButton title="Separate" action={{ verb: 'relationship.separate', targetIds: [person.id], parameters: {}, destructive: true }} tone="danger" style={{ flex: 1 }} /> : null}
-              </View> : null}
-            </Card>
-          ))}
+          {shown.length === 0 ? <Card><Heading size="small">Nobody here yet</Heading><Body secondary>{age < 18 ? 'School, family, activities, and ordinary life will keep putting new people in your orbit.' : 'The world keeps generating people through school, work, wellness, organizations, family, and ordinary life.'}</Body></Card> : shown.map(({ relationship, person, kind }) => {
+            const portrait = relationshipPortrait(world, person.id);
+            return (
+              <Card key={relationship.id}>
+                <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{person.firstName} {person.lastName}</Heading><Body secondary>{kind} · age {ageOf(world.calendar.week, person.birthWeek)} · {relationshipStatus(relationship.trust, relationship.affection, relationship.resentment)}</Body></View><StatusPill tone={person.isAlive ? 'success' : 'neutral'}>{person.isAlive ? 'Around' : 'Remembered'}</StatusPill></View>
+
+                <Body>{portrait.summary}</Body>
+                <View style={styles.lifeBlock}><Eyebrow>THEIR LIFE RIGHT NOW</Eyebrow><Body secondary>{portrait.currentLife}</Body></View>
+                <View style={styles.traitWrap}>{portrait.traits.map((trait) => <StatusPill key={trait} tone="neutral">{trait}</StatusPill>)}</View>
+
+                <View style={styles.metrics}>
+                  <View style={styles.metric}><View style={styles.row}><Body>Trust</Body><Body secondary>{Math.round(relationship.trust)}</Body></View><ProgressBar value={relationship.trust} /></View>
+                  <View style={styles.metric}><View style={styles.row}><Body>Affection</Body><Body secondary>{Math.round(relationship.affection)}</Body></View><ProgressBar value={relationship.affection} tone="legacy" /></View>
+                  <View style={styles.metric}><View style={styles.row}><Body>Resentment</Body><Body secondary>{Math.round(relationship.resentment)}</Body></View><ProgressBar value={relationship.resentment} tone="danger" /></View>
+                </View>
+
+                <View style={styles.lifeBlock}>
+                  <View style={styles.row}><Eyebrow>SHARED HISTORY</Eyebrow><Body secondary>Last real interaction {weeksAgo(world.calendar.week, relationship.lastInteractionWeek)}</Body></View>
+                  {portrait.recentSharedHistory.length === 0 ? <Body secondary>Nothing major is written into the relationship yet. Most of the story is still ordinary time together—or apart.</Body> : portrait.recentSharedHistory.slice(0, 3).map((memory, index) => <Body key={`${person.id}-memory-${index}`} secondary>• {memory}</Body>)}
+                </View>
+
+                {person.isAlive ? <View style={styles.actions}>
+                  <EngineActionButton title={age < 13 ? 'Talk' : 'Reach out'} action={{ verb: 'relationship.contact', targetIds: [person.id], parameters: {} }} style={{ flex: 1 }} />
+                  <EngineActionButton title="Spend time" action={{ verb: 'relationship.spend_time', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} />
+                  {age >= 14 ? <EngineActionButton title="Give $100" action={{ verb: 'relationship.transfer_cash', targetIds: [person.id], parameters: { amountCents: 10_000 } }} style={{ flex: 1 }} /> : null}
+                  {age >= 16 && !actor.partnerId && !person.partnerId && !['parent', 'child', 'sibling', 'relative'].includes(kind) ? <EngineActionButton title="Ask out" action={{ verb: 'relationship.date', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} /> : null}
+                  {age >= 18 && actor.partnerId === person.id && relationship.kind === 'partner' ? <EngineActionButton title="Propose" action={{ verb: 'relationship.propose', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} /> : null}
+                  {age >= 16 && actor.partnerId === person.id ? <EngineActionButton title="Separate" action={{ verb: 'relationship.separate', targetIds: [person.id], parameters: {}, destructive: true }} tone="danger" style={{ flex: 1 }} /> : null}
+                </View> : null}
+              </Card>
+            );
+          })}
         </View>
         {age >= 8 ? <OtherActionComposer domains={['relationship', 'family', 'dynasty']} placeholder="Do something else with someone…" /> : null}
       </AppScreen>
@@ -99,7 +123,7 @@ export default function PeopleScreen() {
 
       <View style={styles.section}>
         <SectionHeader title="Important memories" action={<StatusPill>{Object.keys(world.memories).length}</StatusPill>} />
-        {Object.values(world.memories).length === 0 ? <Card><Body secondary>{age < 10 ? 'Nothing dramatic has stuck yet. Give it time.' : 'Nothing major has stuck yet.'}</Body></Card> : Object.values(world.memories).slice(0, 5).map((memory) => <Card key={memory.id}><Heading size="small">{memory.category}</Heading><Body>{memory.narrative}</Body><Eyebrow>IMPORTANCE {Math.round(memory.importance)}</Eyebrow></Card>)}
+        {Object.values(world.memories).length === 0 ? <Card><Body secondary>{age < 10 ? 'Nothing dramatic has stuck yet. Give it time.' : 'Nothing major has stuck yet.'}</Body></Card> : Object.values(world.memories).sort((left, right) => right.week - left.week).slice(0, 6).map((memory) => <Card key={memory.id}><View style={styles.row}><Heading size="small">{memory.category}</Heading><StatusPill tone={memory.unresolved ? 'warning' : 'neutral'}>{memory.unresolved ? 'Still matters' : 'Remembered'}</StatusPill></View><Body>{memory.narrative}</Body><Eyebrow>IMPORTANCE {Math.round(memory.importance)}</Eyebrow></Card>)}
       </View>
     </AppScreen>
   );
@@ -112,6 +136,8 @@ const styles = StyleSheet.create({
   metrics: { gap: spacing.md },
   metric: { gap: 6 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  lifeBlock: { gap: 5, paddingTop: 2 },
+  traitWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   groupTile: { minHeight: 94, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, padding: 14, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   icon: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   iconText: { fontSize: 25 },
