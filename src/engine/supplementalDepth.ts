@@ -3,6 +3,7 @@ import { applyConsequenceWeb } from './consequenceWeb';
 import { allocateId } from './createWorld';
 import { executeDeepSimulationAction } from './deepSimulationActions';
 import { applyDeepSimulationAdvance, normalizeDeepSimulationState } from './deepSimulation';
+import { applyDeepTimeConsequences } from './deepTimeConsequences';
 import { applyFactionAdvance, executeFactionDepth } from './factionDepth';
 import { recordHistory } from './history';
 import { applyImmersionWorld } from './immersionWorld';
@@ -367,5 +368,6 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
   const consequence = applyConsequenceWeb(before, immersed);
   const tracked = applyTrackDepthAdvance(before, consequence);
   const faction = applyFactionAdvance(before, tracked);
-  return applyDeepSimulationAdvance(before, faction);
+  const deep = applyDeepSimulationAdvance(before, faction);
+  return applyDeepTimeConsequences(before, deep);
 }
