@@ -1,11 +1,22 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EngineActionButton } from '@/components/EngineActionButton';
 import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { useGame } from '@/state/GameProvider';
 import { AppScreen, Body, Card, Eyebrow, Heading, ProgressBar, SectionHeader, StatusPill } from '@/ui/components';
-import { spacing } from '@/ui/theme';
+import { radius, spacing, useAppTheme } from '@/ui/theme';
+
+type Group = 'family' | 'friends' | 'dating' | 'acquaintances' | 'professional' | 'rivals';
+
+const groups: { id: Group; icon: string; title: string; subtitle: string }[] = [
+  { id: 'family', icon: '🏡', title: 'Family', subtitle: 'Parents, siblings, children, relatives, and the people who remember everything.' },
+  { id: 'friends', icon: '🫶', title: 'Friends', subtitle: 'The people you chose and somehow kept around.' },
+  { id: 'dating', icon: '💘', title: 'Dating & partners', subtitle: 'Dates, partners, spouses, and relationship decisions.' },
+  { id: 'acquaintances', icon: '👋', title: 'Acquaintances', subtitle: 'People you met through life, classes, the gym, work, or random circumstance.' },
+  { id: 'professional', icon: '🤝', title: 'Professional network', subtitle: 'Coworkers, bankers, advisors, executives, and useful—or dangerous—connections.' },
+  { id: 'rivals', icon: '⚡', title: 'Rivals', subtitle: 'People who would probably enjoy seeing you trip over something.' },
+];
 
 function relationshipStatus(trust: number, affection: number, resentment: number): string {
   const score = (trust + affection - resentment) / 2;
@@ -14,67 +25,90 @@ function relationshipStatus(trust: number, affection: number, resentment: number
 
 export default function PeopleScreen() {
   const { world } = useGame();
+  const { colors } = useAppTheme();
+  const [selected, setSelected] = useState<Group | null>(null);
   if (!world) return null;
   const actor = world.characters[world.playerCharacterId];
-  const relationships = Object.values(world.relationships)
+  const relationships = useMemo(() => Object.values(world.relationships)
     .filter((relationship) => relationship.characterIds.includes(actor.id))
     .map((relationship) => {
       const otherId = relationship.characterIds.find((id) => id !== actor.id)!;
+      const person = world.characters[otherId];
       const kind = actor.parentIds.includes(otherId) ? 'parent' : actor.childIds.includes(otherId) ? 'child' : relationship.kind;
-      return { relationship, person: world.characters[otherId], kind };
+      let group: Group;
+      if (['parent', 'child', 'sibling', 'relative'].includes(kind)) group = 'family';
+      else if (['partner', 'spouse'].includes(kind)) group = 'dating';
+      else if (kind === 'friend') group = 'friends';
+      else if (kind === 'rival') group = 'rivals';
+      else if (kind === 'professional' && person?.professionId) group = 'professional';
+      else group = 'acquaintances';
+      return { relationship, person, kind, group };
     })
-    .filter((item) => item.person);
+    .filter((item) => item.person), [actor.childIds, actor.id, actor.parentIds, world.characters, world.relationships]);
+
+  if (selected) {
+    const definition = groups.find((group) => group.id === selected)!;
+    const shown = relationships.filter((item) => item.group === selected);
+    return (
+      <AppScreen>
+        <Pressable onPress={() => setSelected(null)} style={[styles.back, { backgroundColor: colors.secondary }]}><Text style={[styles.backText, { color: colors.text }]}>‹ People</Text></Pressable>
+        <View style={styles.header}><Eyebrow>{definition.icon} {definition.title.toUpperCase()}</Eyebrow><Heading size="large">{definition.title}</Heading><Body secondary>{definition.subtitle}</Body></View>
+        <View style={styles.section}>
+          {shown.length === 0 ? <Card><Heading size="small">Nobody here yet</Heading><Body secondary>That can change. The world keeps generating people through school, work, wellness, organizations, family, and ordinary life.</Body></Card> : shown.map(({ relationship, person, kind }) => (
+            <Card key={relationship.id}>
+              <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{person.firstName} {person.lastName}</Heading><Body secondary>{kind} · {relationshipStatus(relationship.trust, relationship.affection, relationship.resentment)}</Body></View><StatusPill tone={person.isAlive ? 'success' : 'neutral'}>{person.isAlive ? 'Around' : 'Remembered'}</StatusPill></View>
+              <View style={styles.metrics}>
+                <View style={styles.metric}><View style={styles.row}><Body>Trust</Body><Body secondary>{Math.round(relationship.trust)}</Body></View><ProgressBar value={relationship.trust} /></View>
+                <View style={styles.metric}><View style={styles.row}><Body>Affection</Body><Body secondary>{Math.round(relationship.affection)}</Body></View><ProgressBar value={relationship.affection} tone="legacy" /></View>
+                <View style={styles.metric}><View style={styles.row}><Body>Resentment</Body><Body secondary>{Math.round(relationship.resentment)}</Body></View><ProgressBar value={relationship.resentment} tone="danger" /></View>
+              </View>
+              {person.isAlive ? <View style={styles.actions}>
+                <EngineActionButton title="Reach out" action={{ verb: 'relationship.contact', targetIds: [person.id], parameters: {} }} style={{ flex: 1 }} />
+                <EngineActionButton title="Spend time" action={{ verb: 'relationship.spend_time', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} />
+                <EngineActionButton title="Give $100" action={{ verb: 'relationship.transfer_cash', targetIds: [person.id], parameters: { amountCents: 10_000 } }} style={{ flex: 1 }} />
+                {!actor.partnerId && !person.partnerId && !['parent', 'child', 'sibling', 'relative'].includes(kind) ? <EngineActionButton title="Ask out" action={{ verb: 'relationship.date', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} /> : null}
+                {actor.partnerId === person.id && relationship.kind === 'partner' ? <EngineActionButton title="Propose" action={{ verb: 'relationship.propose', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} /> : null}
+                {actor.partnerId === person.id ? <EngineActionButton title="Separate" action={{ verb: 'relationship.separate', targetIds: [person.id], parameters: {}, destructive: true }} tone="danger" style={{ flex: 1 }} /> : null}
+              </View> : null}
+            </Card>
+          ))}
+        </View>
+        <OtherActionComposer domains={['relationship', 'family', 'dynasty']} placeholder="Do something else with someone…" />
+      </AppScreen>
+    );
+  }
 
   return (
     <AppScreen>
-      <View style={styles.header}><View style={{ alignSelf: 'stretch', gap: 4 }}><Eyebrow>YOUR WORLD</Eyebrow><Heading size="large">People</Heading><Body secondary>Persistent relationships, memories, obligations, and independent lives.</Body></View><StatusPill tone="accent">{relationships.length} close ties</StatusPill></View>
-
-      <Card accent>
-        <SectionHeader title={`${world.dynasty.familyName} family`} action={<StatusPill tone="warning">Generation {world.dynasty.generation}</StatusPill>} />
-        <Body>{actor.parentIds.length} parents · {actor.childIds.length} children · {actor.partnerId ? 'Partnered' : 'No partner'}</Body>
-        <Body secondary>The family timeline, ownership history, obligations, and resentments continue when the active character changes.</Body>
-      </Card>
+      <View style={styles.header}><Eyebrow>THE PEOPLE IN YOUR MESS</Eyebrow><Heading size="large">People</Heading><Body secondary>Family, friends, dates, acquaintances, coworkers, rivals, and everyone who remembers what you did twenty years ago.</Body></View>
+      <Card accent><SectionHeader title={`${world.dynasty.familyName} family`} action={<StatusPill tone="warning">Generation {world.dynasty.generation}</StatusPill>} /><Body>{actor.parentIds.length} parents · {actor.childIds.length} children · {actor.partnerId ? 'Partnered' : 'Single'}</Body></Card>
 
       <View style={styles.section}>
-        <SectionHeader title="Relationships" />
-        {relationships.map(({ relationship, person, kind }) => (
-          <Card key={relationship.id}>
-            <View style={styles.row}>
-              <View style={{ flex: 1, gap: 3 }}><Heading size="small">{person.firstName} {person.lastName}</Heading><Body secondary>{kind} · {relationshipStatus(relationship.trust, relationship.affection, relationship.resentment)}</Body></View>
-              <StatusPill tone={person.isAlive ? 'success' : 'neutral'}>{person.isAlive ? 'Living' : 'Archived'}</StatusPill>
-            </View>
-            <View style={styles.metrics}>
-              <View style={styles.metric}><View style={styles.row}><Body>Trust</Body><Body secondary>{Math.round(relationship.trust)}</Body></View><ProgressBar value={relationship.trust} /></View>
-              <View style={styles.metric}><View style={styles.row}><Body>Affection</Body><Body secondary>{Math.round(relationship.affection)}</Body></View><ProgressBar value={relationship.affection} tone="legacy" /></View>
-              <View style={styles.metric}><View style={styles.row}><Body>Resentment</Body><Body secondary>{Math.round(relationship.resentment)}</Body></View><ProgressBar value={relationship.resentment} tone="danger" /></View>
-            </View>
-            <View style={styles.actions}>
-              <EngineActionButton title="Reach out" action={{ verb: 'relationship.contact', targetIds: [person.id], parameters: {} }} style={{ flex: 1 }} />
-              <EngineActionButton title="Spend time" action={{ verb: 'relationship.spend_time', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} />
-              <EngineActionButton title="Give $100" action={{ verb: 'relationship.transfer_cash', targetIds: [person.id], parameters: { amountCents: 10_000 } }} style={{ flex: 1 }} />
-              {!actor.partnerId && !person.partnerId && !['parent', 'child', 'sibling'].includes(relationship.kind) ? <EngineActionButton title="Ask out" action={{ verb: 'relationship.date', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} /> : null}
-              {actor.partnerId === person.id && relationship.kind === 'partner' ? <EngineActionButton title="Propose" action={{ verb: 'relationship.propose', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} /> : null}
-              {actor.partnerId === person.id ? <EngineActionButton title="Separate" action={{ verb: 'relationship.separate', targetIds: [person.id], parameters: {}, destructive: true }} tone="danger" style={{ flex: 1 }} /> : null}
-            </View>
-          </Card>
-        ))}
+        {groups.map((group) => {
+          const count = relationships.filter((item) => item.group === group.id).length;
+          return <Pressable key={group.id} onPress={() => setSelected(group.id)} style={({ pressed }) => [styles.groupTile, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.75 : 1 }]}><View style={[styles.icon, { backgroundColor: colors.accentSoft }]}><Text style={styles.iconText}>{group.icon}</Text></View><View style={{ flex: 1, gap: 3 }}><Heading size="small">{group.title}</Heading><Body secondary>{group.subtitle}</Body></View><View style={{ alignItems: 'center', gap: 2 }}><StatusPill tone={count > 0 ? 'accent' : 'neutral'}>{count}</StatusPill><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></View></Pressable>;
+        })}
       </View>
 
       <View style={styles.section}>
         <SectionHeader title="Important memories" action={<StatusPill>{Object.keys(world.memories).length}</StatusPill>} />
-        {Object.values(world.memories).length === 0 ? <Card><Body secondary>Important choices will create durable memories here. Routine transcripts are not retained.</Body></Card> : Object.values(world.memories).slice(0, 8).map((memory) => <Card key={memory.id}><Heading size="small">{memory.category}</Heading><Body>{memory.narrative}</Body><Eyebrow>IMPORTANCE {Math.round(memory.importance)} · {memory.visibility.toUpperCase()}</Eyebrow></Card>)}
+        {Object.values(world.memories).length === 0 ? <Card><Body secondary>Nothing major has stuck yet.</Body></Card> : Object.values(world.memories).slice(0, 5).map((memory) => <Card key={memory.id}><Heading size="small">{memory.category}</Heading><Body>{memory.narrative}</Body><Eyebrow>IMPORTANCE {Math.round(memory.importance)}</Eyebrow></Card>)}
       </View>
-
-      <OtherActionComposer domains={['relationship', 'family', 'dynasty']} placeholder="Give my sibling money, choose an heir, or reach out to someone…" />
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { gap: spacing.sm, alignItems: 'flex-start', paddingTop: 8 },
+  header: { gap: 4, paddingTop: 8 },
   section: { gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   metrics: { gap: spacing.md },
   metric: { gap: 6 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  groupTile: { minHeight: 94, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, padding: 14, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  icon: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  iconText: { fontSize: 25 },
+  chevron: { fontSize: 26, lineHeight: 26 },
+  back: { alignSelf: 'flex-start', minHeight: 38, borderRadius: radius.pill, paddingHorizontal: 12, justifyContent: 'center', marginTop: 4 },
+  backText: { fontSize: 13, fontWeight: '700' },
 });
