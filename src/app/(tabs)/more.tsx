@@ -23,7 +23,7 @@ function qualitative(value: number): string {
 
 export default function MoreScreen() {
   const { world, busy, exportSave, importSave, deleteAllData, updateSettings, newLife } = useGame();
-  const { colors } = useAppTheme();
+  const { colors, theme } = useAppTheme();
   const [capabilities, setCapabilities] = useState<LegacyAICapabilities | null>(null);
   const [firstName, setFirstName] = useState('Alex');
   const [lastName, setLastName] = useState('Mercer');
@@ -101,6 +101,15 @@ export default function MoreScreen() {
           <Body secondary>{capabilities?.enhancedAvailable ? 'Apple Foundation Models is available on this device. Requests remain local.' : capabilities?.enhancedReason ?? 'The deterministic baseline works without Apple Intelligence.'}</Body>
           <SettingRow label="Enhanced local language" detail="Use Apple Foundation Models when available; fall back silently." value={world.settings.enhancedAIEnabled} onChange={(value) => { void updateSettings({ enhancedAIEnabled: value }); }} />
           <Body secondary>The module receives only bounded current context. It has no save-database handle, network fallback, account, or hosted endpoint.</Body>
+        </Card>
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader title="Appearance" />
+        <Card accent>
+          <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{theme.name}</Heading><Body secondary>{theme.description}</Body></View><StatusPill tone="accent">{theme.ambient.kind === 'none' ? 'Still' : (world.settings.ambientThemeEffects ?? true) ? 'Ambient on' : 'Ambient off'}</StatusPill></View>
+          <Body secondary>{theme.ambient.label}: {theme.ambient.detail}</Body>
+          <PrimaryButton title="Themes & screen effects" onPress={() => router.push('/themes' as never)} />
         </Card>
       </View>
 
