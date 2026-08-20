@@ -3,6 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 
 import { executeAction } from '@/engine/actions';
 import { allocateId, createWorld } from '@/engine/createWorld';
+import { executeDepthAction } from '@/engine/depthActions';
 import { runDeveloperCommand, type DeveloperCommand } from '@/engine/developerTools';
 import { activityLevel, advanceWorld, resolveEvent } from '@/engine/simulation';
 import type { AdvanceSummary, FavoriteEntityType, FocusArea, GameSettings, IntentAction, IntentAuditEntry, OutcomeExplanation, WorldState } from '@/engine/types';
@@ -238,6 +239,19 @@ export function GameProvider({ children }: React.PropsWithChildren) {
         if (world.settings.hapticsEnabled) await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       });
       return { completed: true, message: resultMessage, requiresConfirmation: false };
+    }
+
+    const depthResult = executeDepthAction(world, action, confirmed);
+    if (depthResult) {
+      if (depthResult.validation.requiresConfirmation && !confirmed) return { completed: false, message: depthResult.message, requiresConfirmation: true, explanation: depthResult.explanation };
+      if (!depthResult.validation.valid) return { completed: false, message: depthResult.message, requiresConfirmation: false, explanation: depthResult.explanation };
+      await runBusy(async () => {
+        await persist(depthResult.world);
+        setMessage(depthResult.message);
+        setLastExplanation(depthResult.explanation ?? null);
+        if (world.settings.hapticsEnabled) await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      });
+      return { completed: true, message: depthResult.message, requiresConfirmation: false, explanation: depthResult.explanation };
     }
 
     const result = executeAction(world, action, confirmed);
