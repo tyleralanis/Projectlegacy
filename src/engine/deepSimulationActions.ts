@@ -5,10 +5,20 @@ import {
   ensureCompetencies,
   gainCompetency,
 } from './competencies';
-import { allocateId } from './createWorld';
+import { allocateId, playerAgeYears } from './createWorld';
 import { recordHistory } from './history';
 import { nextRandom } from './random';
-import type { ActionResult, Business, CareerState, CompetencyKey, EducationState, IntentAction, WorldState } from './types';
+import type {
+  ActionResult,
+  Business,
+  CareerState,
+  Character,
+  CompetencyKey,
+  EducationState,
+  FocusArea,
+  IntentAction,
+  WorldState,
+} from './types';
 
 const DEEP_VERBS = new Set([
   'skills.practice',
@@ -29,8 +39,10 @@ const DEEP_VERBS = new Set([
   'markets.private_deal',
   'dynasty.family_council',
   'dynasty.train_heir',
+  'politics.run_for_office',
   'politics.build_coalition',
   'politics.recruit_staff',
+  'politics.policy_action',
 ]);
 
 function clone<T>(value: T): T {
@@ -92,16 +104,15 @@ function createMemory(world: WorldState, category: string, participantIds: strin
 }
 
 function practiceSkill(source: WorldState, action: IntentAction): ActionResult {
-  const actor = source.characters[source.playerCharacterId];
   const skill = typeof action.parameters.skill === 'string' ? action.parameters.skill as CompetencyKey : undefined;
   const allowed: CompetencyKey[] = ['academics', 'communication', 'leadership', 'management', 'finance', 'investing', 'sales', 'negotiation', 'technology', 'trades', 'law', 'medicine', 'athletics', 'media', 'politics', 'parenting'];
   if (!skill || !allowed.includes(skill)) return blocked(source, 'Choose a real competency to practice.');
   const world = clone(source);
-  const nextActor = world.characters[world.playerCharacterId];
-  ensureCompetencies(nextActor);
-  gainCompetency(nextActor, skill, 2.8 + nextActor.discipline / 80);
-  nextActor.stress = clamp(nextActor.stress + 1.4);
-  nextActor.mood = clamp(nextActor.mood + (nextActor.ambition >= 60 ? 0.8 : -0.2));
+  const actor = world.characters[world.playerCharacterId];
+  ensureCompetencies(actor);
+  gainCompetency(actor, skill, 2.8 + actor.discipline / 80);
+  actor.stress = clamp(actor.stress + 1.4);
+  actor.mood = clamp(actor.mood + (actor.ambition >= 60 ? 0.8 : -0.2));
   return ok(world, `You deliberately practiced ${skill}. The skill improved, and the session used time and attention instead of granting a free stat bump.`);
 }
 
@@ -122,7 +133,8 @@ function careerAction(source: WorldState, action: IntentAction): ActionResult {
     const nextCareer = world.careers[career.id];
     const nextRelationship = world.relationships[candidate.relationship.id];
     const mentor = world.characters[candidate.person.id];
-    const willingness = nextRelationship.respect * 0.34 + nextRelationship.trust * 0.24 + actor.reputation.professional * 0.18 + actor.charisma * 0.12 + mentor.empathy * 0.12;
+    const nextActor = world.characters[actor.id];
+    const willingness = nextRelationship.respect * 0.34 + nextRelationship.trust * 0.24 + nextActor.reputation.professional * 0.18 + nextActor.charisma * 0.12 + mentor.empathy * 0.12;
     if (willingness + roll(world) * 28 < 56) {
       nextRelationship.respect = clamp(nextRelationship.respect + 1);
       return ok(world, `${mentor.firstName} was friendly but did not really take you on. You made the ask without damaging the relationship.`);
@@ -132,8 +144,8 @@ function careerAction(source: WorldState, action: IntentAction): ActionResult {
     nextCareer.promotionProgress = clamp((nextCareer.promotionProgress ?? 0) + 7);
     nextRelationship.trust = clamp(nextRelationship.trust + 5);
     nextRelationship.respect = clamp(nextRelationship.respect + 4);
-    gainCompetency(world.characters[actor.id], 'communication', 1.1);
-    gainCompetency(world.characters[actor.id], 'leadership', 0.7);
+    gainCompetency(nextActor, 'communication', 1.1);
+    gainCompetency(nextActor, 'leadership', 0.7);
     createMemory(world, 'Career · Mentor', [actor.id, mentor.id], `${mentor.firstName} began actively mentoring ${actor.firstName}. Advice, sponsorship, and future disagreements now have a real relationship to travel through.`, 74, true);
     return ok(world, `${mentor.firstName} agreed to mentor you. Internal standing and promotion leverage improved, but the relationship now matters to the career.`);
   }
@@ -167,12 +179,13 @@ function careerAction(source: WorldState, action: IntentAction): ActionResult {
   const world = clone(source);
   const nextRelationship = world.relationships[relationship.id];
   const nextCareer = world.careers[career.id];
-  const fit = actor.empathy * 0.25 + actor.charisma * 0.2 + competency(world, actor.id, 'communication') * 0.24 + nextRelationship.respect * 0.18 + nextRelationship.trust * 0.13;
+  const nextActor = world.characters[actor.id];
+  const fit = nextActor.empathy * 0.25 + nextActor.charisma * 0.2 + competency(world, actor.id, 'communication') * 0.24 + nextRelationship.respect * 0.18 + nextRelationship.trust * 0.13;
   if (fit + roll(world) * 30 >= 55) {
     nextRelationship.trust = clamp(nextRelationship.trust + 6);
     nextRelationship.respect = clamp(nextRelationship.respect + 5);
     nextCareer.organizationStanding = clamp((nextCareer.organizationStanding ?? 48) + 4);
-    gainCompetency(world.characters[actor.id], 'communication', 0.8);
+    gainCompetency(nextActor, 'communication', 0.8);
     createMemory(world, 'Career · Alliance', [actor.id, target.id], `${actor.firstName} and ${target.firstName} became more deliberate allies inside the organization. That can help both careers, but coworkers can also notice coalitions forming.`, 58);
     return ok(world, `${target.firstName} became a stronger internal ally. Your standing improved because organizations are made of people, not only performance scores.`);
   }
@@ -210,7 +223,7 @@ function educationAction(source: WorldState, action: IntentAction): ActionResult
       next.recordedGrade = clamp(next.recordedGrade + 2.8);
       next.network = clamp(next.network + 3);
       nextActor.reputation.professional = clamp(nextActor.reputation.professional + 2);
-      createMemory(world, 'Education · Standout project', [actor.id, education.id], 'A serious project became one of the pieces of work professors and future interviewers can actually remember. It is more useful than a generic grade bump because it connects school to reputation.', 68, false);
+      createMemory(world, 'Education · Standout project', [actor.id, education.id], 'A serious project became one of the pieces of work professors and future interviewers can actually remember. It is more useful than a generic grade bump because it connects school to reputation.', 68);
       return ok(world, 'The project turned out strong. Grades, academic skill, faculty visibility, and professional reputation all moved together.');
     }
     next.recordedGrade = clamp(next.recordedGrade + 0.8);
@@ -224,16 +237,16 @@ function educationAction(source: WorldState, action: IntentAction): ActionResult
   const existing = next.mentorId ? world.characters[next.mentorId] : undefined;
   if (existing?.isAlive) return blocked(source, `${existing.firstName} is already your academic mentor.`);
   const mentorId = allocateId(world, 'character');
-  const mentor = {
+  const mentor: Character = {
     id: mentorId,
-    firstName: ['Dr. Avery', 'Professor Nia', 'Dr. Theo', 'Professor Maya'][Math.floor(roll(world) * 4)],
+    firstName: ['Avery', 'Nia', 'Theo', 'Maya'][Math.floor(roll(world) * 4)],
     lastName: ['Bennett', 'Shah', 'Kim', 'Rivera'][Math.floor(roll(world) * 4)],
     birthWeek: world.calendar.week - (38 + Math.floor(roll(world) * 24)) * 52,
     isAlive: true,
     cityId: actor.cityId,
     householdId: `household-${mentorId}`,
-    parentIds: [] as string[],
-    childIds: [] as string[],
+    parentIds: [],
+    childIds: [],
     cashCents: 6_500_000,
     health: 78,
     mood: 66,
@@ -246,9 +259,9 @@ function educationAction(source: WorldState, action: IntentAction): ActionResult
     knowledge: 88,
     charisma: 64,
     fitness: 48,
-    focuses: ['Job', 'Networking', 'Health'] as const,
+    focuses: ['Job', 'Networking', 'Health'],
     reputation: { public: 48, business: 42, employee: 66, political: 42, professional: 82, family: 55, faction: 12 },
-    detailTier: 'standard' as const,
+    detailTier: 'standard',
     lastMeaningfulWeek: world.calendar.week,
   };
   world.characters[mentorId] = mentor;
@@ -274,7 +287,7 @@ function sportsAction(source: WorldState, action: IntentAction): ActionResult {
     const sport = typeof action.parameters.sport === 'string' && action.parameters.sport.trim() ? action.parameters.sport.trim().slice(0, 30) : 'Basketball';
     nextEducation.sport = sport;
     nextEducation.athleticLevel = Math.max(nextEducation.athleticLevel ?? 0, competency(world, actor.id, 'athletics') * 0.55);
-    nextActor.focuses = ['Sport', ...nextActor.focuses.filter((focus) => focus !== 'Sport')].slice(0, 3);
+    nextActor.focuses = ['Sport' as FocusArea, ...nextActor.focuses.filter((focus) => focus !== 'Sport')].slice(0, 3);
     createMemory(world, 'Athletics · Chosen sport', [actor.id, nextEducation.id], `${actor.firstName} committed to ${sport}. Training, competition, recruiting, health, school, and time now have a shared storyline.`, 58);
     return ok(world, `${sport} is now your main competitive sport and Sport became a standing priority.`);
   }
@@ -297,7 +310,7 @@ function sportsAction(source: WorldState, action: IntentAction): ActionResult {
     nextActor.stress = clamp(nextActor.stress + 2.4);
     gainCompetency(nextActor, 'athletics', 1.1);
     const description = outcome >= 90 ? 'a standout performance people will remember' : outcome >= 76 ? 'a strong result' : outcome >= 60 ? 'a respectable result' : 'a rough outing';
-    recordHistory(world, 'education', `Athletics: ${description}`, `Competition is now part of the athletic record. Results affect recognition, confidence, reputation, and eventually recruiting or professional interest.`, { importance: outcome >= 90 ? 4 : 2 });
+    recordHistory(world, 'education', `Athletics: ${description}`, 'Competition is now part of the athletic record. Results affect recognition, confidence, reputation, and eventually recruiting or professional interest.', { importance: outcome >= 90 ? 4 : 2 });
     return ok(world, `You had ${description}. The result changed your athletic recognition instead of only your fitness stat.`);
   }
 
@@ -314,7 +327,7 @@ function sportsAction(source: WorldState, action: IntentAction): ActionResult {
   const sport = nextEducation?.sport ?? 'Professional sport';
   world.careers[careerId] = { id: careerId, characterId: actor.id, employerId: 'organization-pro-sports', title: `Professional ${sport} athlete`, sector: 'Sports', weeklySalaryCents: Math.round(140_000 + recognition * 7_500 + level * 5_500), performance: clamp(level * 0.7 + recognition * 0.3), satisfaction: 82, weeksInRole: 0, active: true, hoursPerWeek: 46, level: 4, department: sport, promotionProgress: 0, organizationStanding: 58 };
   if (!world.organizations['organization-pro-sports']) world.organizations['organization-pro-sports'] = { id: 'organization-pro-sports', kind: 'professional', name: 'National Sports Association', resourcesCents: 500_000_000_00, influence: 72, stability: 78, memberIds: [], history: ['A national professional sports institution.'] };
-  world.organizations['organization-pro-sports'].memberIds.push(actor.id);
+  if (!world.organizations['organization-pro-sports'].memberIds.includes(actor.id)) world.organizations['organization-pro-sports'].memberIds.push(actor.id);
   recordHistory(world, 'career', 'Turned professional', `${actor.firstName} signed a professional ${sport} contract. The sport is now a career with money, performance pressure, injuries, fame, and a clock on the body.`, { important: true, importance: 5 });
   return ok(world, `You signed a professional ${sport} contract. Athletics has become your career rather than an extracurricular.`);
 }
@@ -391,7 +404,8 @@ function businessAction(source: WorldState, action: IntentAction): ActionResult 
   buyer.locations = (buyer.locations ?? 1) + (acquired.locations ?? 1);
   buyer.complexity = clamp((buyer.complexity ?? 20) + 14 + (acquired.complexity ?? 20) * 0.22);
   acquired.active = false;
-  world.organizations[acquired.organizationId].history.push(`Acquired by ${buyer.name} in week ${world.calendar.week}.`);
+  const acquiredOrganization = world.organizations[acquired.organizationId];
+  if (acquiredOrganization) acquiredOrganization.history.push(`Acquired by ${buyer.name} in week ${world.calendar.week}.`);
   gainCompetency(world.characters[actor.id], 'finance', 1.4);
   gainCompetency(world.characters[actor.id], 'negotiation', 1.3);
   gainCompetency(world.characters[actor.id], 'management', 1.1);
@@ -419,7 +433,7 @@ function privateDeal(source: WorldState, action: IntentAction): ActionResult {
   gainCompetency(nextActor, 'finance', 0.8);
   dealMemory.unresolved = false;
   dealMemory.narrative = `${dealMemory.narrative} You eventually committed ${money(investment)} to a private deal introduced through the relationship.`;
-  recordHistory(world, 'wealth', 'Entered a private deal', `Public markets were no longer the whole investing universe. Relationship access turned into an illiquid private position with its own quality and risk.`, { importance: 3 });
+  recordHistory(world, 'markets', 'Entered a private deal', 'Public markets were no longer the whole investing universe. Relationship access turned into an illiquid private position with its own quality and risk.', { importance: 3 });
   return ok(world, `You invested ${money(investment)} in a private deal. It is now a real holding, not a flavor event.`);
 }
 
@@ -434,14 +448,12 @@ function dynastyAction(source: WorldState, action: IntentAction): ActionResult {
   if (action.verb === 'dynasty.family_council') {
     const world = clone(source);
     const participants = [actor.id];
-    let totalResentment = 0;
     for (const { relationship, person } of livingFamily.slice(0, 8)) {
       const next = world.relationships[relationship.id];
       next.trust = clamp(next.trust + 2.5);
       next.respect = clamp(next.respect + 2);
       next.resentment = clamp(next.resentment - 1.5);
       next.lastInteractionWeek = world.calendar.week;
-      totalResentment += next.resentment;
       participants.push(person.id);
     }
     createMemory(world, 'Dynasty · Family council', participants, 'The family talked about money, expectations, ownership, care, and succession in the same room. Nobody had to agree for ambiguity to become smaller.', 76, true);
@@ -465,13 +477,72 @@ function dynastyAction(source: WorldState, action: IntentAction): ActionResult {
   return ok(world, `${target.firstName} gained leadership, management, finance, and negotiation experience. Being the heir can now become a developed role rather than a label at death.`);
 }
 
+const OFFICE_RULES = [
+  { name: 'Harborview Council', minAge: 18, rep: 15, approval: 0, level: 'local' as const, authority: 18 },
+  { name: 'Mayor of Harborview', minAge: 21, rep: 35, approval: 25, level: 'local' as const, authority: 34 },
+  { name: 'Regional Assembly', minAge: 25, rep: 48, approval: 35, level: 'regional' as const, authority: 42 },
+  { name: 'Governor', minAge: 30, rep: 60, approval: 42, level: 'regional' as const, authority: 62 },
+  { name: 'National Assembly', minAge: 25, rep: 65, approval: 45, level: 'national' as const, authority: 68 },
+  { name: 'President', minAge: 35, rep: 78, approval: 52, level: 'national' as const, authority: 92 },
+];
+
+function runForOffice(source: WorldState, action: IntentAction): ActionResult {
+  const actor = source.characters[source.playerCharacterId];
+  const politics = source.politics[actor.id] ?? { characterId: actor.id, authority: 0, approval: 20 };
+  if (politics.campaign) return blocked(source, 'You already have an active campaign.');
+  const officeName = typeof action.parameters.office === 'string' ? action.parameters.office : 'Harborview Council';
+  const rule = OFFICE_RULES.find((item) => item.name === officeName);
+  if (!rule) return blocked(source, 'That office is not part of the current political ladder.');
+  const age = playerAgeYears(source);
+  if (age < rule.minAge) return blocked(source, `${officeName} requires age ${rule.minAge} or older.`);
+  if (actor.reputation.political < rule.rep) return blocked(source, `${officeName} needs political reputation around ${rule.rep} before a serious campaign is credible.`);
+  if (politics.approval < rule.approval) return blocked(source, `${officeName} needs public approval around ${rule.approval}% before a serious run is credible.`);
+  const seed = amount(action, 500_000);
+  if (actor.cashCents < seed) return blocked(source, `You need ${money(seed)} in available personal cash to seed this campaign.`);
+  const world = clone(source);
+  const nextActor = world.characters[actor.id];
+  const nextPolitics = world.politics[actor.id] ?? { characterId: actor.id, authority: 0, approval: politics.approval };
+  world.politics[actor.id] = nextPolitics;
+  nextActor.cashCents -= seed;
+  const skill = competency(world, actor.id, 'politics');
+  const communication = competency(world, actor.id, 'communication');
+  const coalition = competency(world, actor.id, 'negotiation');
+  nextPolitics.campaign = { office: officeName, weeksRemaining: 26, fundsCents: seed, support: clamp(nextActor.reputation.political * 0.36 + skill * 0.22 + communication * 0.16 + coalition * 0.12 + nextActor.charisma * 0.14), opposition: clamp(42 + rule.authority * 0.2 + roll(world) * 14) };
+  nextActor.focuses = ['Campaign' as FocusArea, ...nextActor.focuses.filter((focus) => focus !== 'Campaign')].slice(0, 3);
+  world.transactions.push({ id: allocateId(world, 'transaction'), week: world.calendar.week, kind: 'campaign-funding', amountCents: -seed, fromId: actor.id, memo: `Campaign for ${officeName}` });
+  recordHistory(world, 'politics', `Campaign for ${officeName}`, `The campaign began with support shaped by political skill, communication, negotiation, reputation, and personal appeal. Money buys reach; it does not buy the result.`, { importance: 4 });
+  return ok(world, `The campaign for ${officeName} has begun. The eligibility ladder was validated by the engine, not only hidden behind a disabled button.`);
+}
+
 function politicsAction(source: WorldState, action: IntentAction): ActionResult {
+  if (action.verb === 'politics.run_for_office') return runForOffice(source, action);
   const actor = source.characters[source.playerCharacterId];
   const politics = source.politics[actor.id];
   if (!politics?.campaign && !politics?.office) return blocked(source, 'You need an active campaign or political office first.');
   const world = clone(source);
   const nextActor = world.characters[actor.id];
   const nextPolitics = world.politics[actor.id];
+
+  if (action.verb === 'politics.policy_action') {
+    if (!nextPolitics.office) return blocked(source, 'You need to hold office before governing through policy.');
+    const skill = competency(world, actor.id, 'politics');
+    const negotiation = competency(world, actor.id, 'negotiation');
+    const leadership = competency(world, actor.id, 'leadership');
+    const institutionalRoom = Math.max(10, 100 - nextPolitics.authority * 0.45);
+    const outcome = skill * 0.35 + negotiation * 0.23 + leadership * 0.17 + nextPolitics.authority * 0.15 + nextActor.reputation.political * 0.1 + roll(world) * institutionalRoom;
+    gainCompetency(nextActor, 'politics', 1.2);
+    gainCompetency(nextActor, 'negotiation', 0.6);
+    if (outcome >= 67) {
+      nextPolitics.approval = clamp(nextPolitics.approval + 3.5);
+      nextActor.reputation.political = clamp(nextActor.reputation.political + 1.5);
+      createMemory(world, 'Politics · Governing record', [actor.id], `A policy push from ${nextPolitics.office} actually moved through the institutions around the office. Skill and coalition work mattered more than simply possessing authority.`, 62);
+      return ok(world, 'The policy moved successfully enough to improve approval and governing reputation.');
+    }
+    nextPolitics.approval = clamp(nextPolitics.approval - 2.5);
+    nextActor.reputation.political = clamp(nextActor.reputation.political - 0.5);
+    createMemory(world, 'Politics · Governing setback', [actor.id], 'A policy push ran into institutions, opposition, or execution problems. Holding office did not make the rest of government disappear.', 58, true);
+    return ok(world, 'The policy push stumbled. Approval fell because authority is leverage, not omnipotence.');
+  }
 
   if (action.verb === 'politics.build_coalition') {
     const skill = competency(world, actor.id, 'politics') * 0.42 + competency(world, actor.id, 'negotiation') * 0.28 + nextActor.charisma * 0.18 + nextActor.empathy * 0.12;
@@ -489,7 +560,8 @@ function politicsAction(source: WorldState, action: IntentAction): ActionResult 
   if (actor.cashCents < cost) return blocked(source, `You need ${money(cost)} to recruit serious political staff.`);
   nextActor.cashCents -= cost;
   const staffId = allocateId(world, 'character');
-  world.characters[staffId] = { id: staffId, firstName: 'Morgan', lastName: 'Reed', birthWeek: world.calendar.week - 37 * 52, isAlive: true, cityId: actor.cityId, householdId: `household-${staffId}`, parentIds: [], childIds: [], cashCents: 4_000_000, health: 76, mood: 64, stress: 46, discipline: 82, ambition: 79, empathy: 61, riskTolerance: 48, ethics: 68, knowledge: 78, charisma: 74, fitness: 49, focuses: ['Campaign', 'Networking', 'Job'], reputation: { public: 48, business: 44, employee: 68, political: 78, professional: 75, family: 50, faction: 25 }, detailTier: 'standard', lastMeaningfulWeek: world.calendar.week };
+  const staff: Character = { id: staffId, firstName: 'Morgan', lastName: 'Reed', birthWeek: world.calendar.week - 37 * 52, isAlive: true, cityId: actor.cityId, householdId: `household-${staffId}`, parentIds: [], childIds: [], cashCents: 4_000_000, health: 76, mood: 64, stress: 46, discipline: 82, ambition: 79, empathy: 61, riskTolerance: 48, ethics: 68, knowledge: 78, charisma: 74, fitness: 49, focuses: ['Campaign', 'Networking', 'Job'], reputation: { public: 48, business: 44, employee: 68, political: 78, professional: 75, family: 50, faction: 25 }, detailTier: 'standard', lastMeaningfulWeek: world.calendar.week };
+  world.characters[staffId] = staff;
   ensureCompetencies(world.characters[staffId]);
   world.characters[staffId].competencies!.politics = 82;
   world.characters[staffId].competencies!.communication = 78;
