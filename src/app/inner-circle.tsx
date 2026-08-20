@@ -2,8 +2,8 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { EngineActionButton } from '@/components/EngineActionButton';
-import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { SubviewHeader } from '@/components/MenuTile';
+import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { innerCircleProfile } from '@/engine/factionDepth';
 import { formatMoney } from '@/engine/money';
 import { useGame } from '@/state/GameProvider';
@@ -57,7 +57,16 @@ export default function InnerCircleScreen() {
     .filter((id) => id !== actor.id)
     .map((id) => world.characters[id])
     .filter((person) => person?.isAlive);
-  const eligiblePluralPartners = followers.filter((person) => ageOf(world.calendar.week, person.birthWeek) >= 18).slice(0, 4);
+  const pluralSpouses = Object.values(world.relationships)
+    .filter((relationship) => relationship.kind === 'spouse' && relationship.characterIds.includes(actor.id))
+    .map((relationship) => ({ relationship, person: world.characters[relationship.characterIds.find((id) => id !== actor.id)!] }))
+    .filter(({ person }) => person?.isAlive && person.id !== actor.partnerId);
+  const spouseIds = new Set(Object.values(world.relationships)
+    .filter((relationship) => relationship.kind === 'spouse' && relationship.characterIds.includes(actor.id))
+    .map((relationship) => relationship.characterIds.find((id) => id !== actor.id)!));
+  const eligiblePluralPartners = followers
+    .filter((person) => ageOf(world.calendar.week, person.birthWeek) >= 18 && !spouseIds.has(person.id) && person.id !== actor.partnerId)
+    .slice(0, 4);
   const history = organization.history.filter((entry) => !entry.startsWith('inner-circle:') && !entry.startsWith('milestone:')).slice(-8).reverse();
   const isReligious = profile.archetype === 'religious';
   const isMilitary = profile.archetype === 'military';
@@ -129,11 +138,20 @@ export default function InnerCircleScreen() {
       </View> : null}
 
       {(isReligious || isCommunal) ? <View style={styles.section}>
-        <SectionHeader title="Household doctrine" />
+        <SectionHeader title="Household doctrine" action={profile.pluralHousehold ? <StatusPill tone="accent">{pluralSpouses.length} additional spouse{pluralSpouses.length === 1 ? '' : 's'}</StatusPill> : undefined} />
         <Card>
           {!profile.pluralHousehold ? <EngineActionButton title="Allow adult plural households" action={{ verb: 'faction.adopt_plural_household', targetIds: [profile.organizationId], parameters: {} }} tone="accent" /> : <>
-            <Body secondary>Plural households are permitted inside the movement. Additional spouse relationships still require an adult NPC to independently accept the invitation.</Body>
-            {eligiblePluralPartners.map((person) => <EngineActionButton key={person.id} title={`Invite ${person.firstName}`} action={{ verb: 'faction.invite_plural_spouse', targetIds: [person.id, profile.organizationId], parameters: {} }} style={{ marginTop: spacing.sm }} />)}
+            <Body secondary>Plural households are permitted inside the movement. Every additional marriage is still its own relationship: an adult NPC must accept the invitation, and attention, trust, resentment, shared plans, and separation remain individual.</Body>
+            {pluralSpouses.map(({ relationship, person }) => <Card key={relationship.id}>
+              <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{person.firstName} {person.lastName}</Heading><Body secondary>Additional spouse · trust {Math.round(relationship.trust)} · affection {Math.round(relationship.affection)} · resentment {Math.round(relationship.resentment)}</Body></View><StatusPill tone={relationship.resentment >= 45 ? 'warning' : 'success'}>{relationship.resentment >= 45 ? 'Strained' : 'Married'}</StatusPill></View>
+              <View style={styles.actions}>
+                <EngineActionButton title="Date night" action={{ verb: 'relationship.date_night', targetIds: [person.id], parameters: { amountCents: 12_000 } }} tone="accent" style={styles.button} />
+                <EngineActionButton title="Weekend away" action={{ verb: 'relationship.weekend_away', targetIds: [person.id], parameters: { amountCents: 95_000 } }} style={styles.button} />
+                <EngineActionButton title="Plan the future" action={{ verb: 'relationship.plan_future', targetIds: [person.id], parameters: {} }} style={styles.button} />
+                <EngineActionButton title="Separate" action={{ verb: 'relationship.separate', targetIds: [person.id], parameters: {}, destructive: true }} tone="danger" style={styles.button} />
+              </View>
+            </Card>)}
+            {eligiblePluralPartners.length > 0 ? <View style={{ gap: spacing.sm }}><Heading size="small">Invite another adult follower</Heading>{eligiblePluralPartners.map((person) => <EngineActionButton key={person.id} title={`Invite ${person.firstName}`} action={{ verb: 'faction.invite_plural_spouse', targetIds: [person.id, profile.organizationId], parameters: {} }} />)}</View> : null}
           </>}
         </Card>
       </View> : null}
