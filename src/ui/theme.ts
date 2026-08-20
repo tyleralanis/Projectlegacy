@@ -1,7 +1,7 @@
 import { useColorScheme } from 'react-native';
 
 import { useGame } from '@/state/GameProvider';
-import { darkColors, getThemePreset, highContrastDarkColors, highContrastLightColors, lightColors, type AppColors } from '@/ui/themeCatalog';
+import { getThemePreset, highContrastDarkColors, highContrastLightColors, type AppColors } from '@/ui/themeCatalog';
 
 export { darkColors, lightColors, highContrastDarkColors, highContrastLightColors } from '@/ui/themeCatalog';
 export { THEME_PRESETS, getThemePreset } from '@/ui/themeCatalog';
