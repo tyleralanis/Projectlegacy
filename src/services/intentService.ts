@@ -43,6 +43,7 @@ const ALIASES: Record<string, string[]> = {
   'markets.buy': ['buy shares', 'buy stock', 'invest in'],
   'markets.sell': ['sell shares', 'sell stock'],
   'markets.allocate': ['invest my savings', 'diversified fund', 'allocate'],
+  'organization.create': ['start an organization', 'create an organization', 'form a group', 'start a group', 'start a club', 'start a charity', 'start a movement', 'start a cult', 'form a cult', 'create a cult'],
   'organization.join': ['join the', 'become a member'],
   'organization.fund': ['fund the', 'donate to'],
   'organization.take_control_attempt': ['take control of', 'lead the organization', 'challenge the leader'],
@@ -127,8 +128,12 @@ function fallbackInterpret(request: IntentRequest): IntentResponse {
   if (best.actionId === 'business.create' && /\b(app|software|tech|technology)\b/.test(normalized)) parameters.sector = 'Technology';
   if (best.actionId === 'business.create' && /\b(real estate|property company)\b/.test(normalized)) parameters.sector = 'Real Estate';
   if (best.actionId === 'business.create' && /\b(logistics|trucking|delivery|transport)\b/.test(normalized)) parameters.sector = 'Logistics';
+  if (best.actionId === 'organization.create') {
+    parameters.kind = normalized.includes('charity') ? 'charity' : normalized.includes('club') ? 'club' : normalized.includes('movement') || normalized.includes('cult') ? 'other' : 'other';
+    parameters.name = normalized.includes('cult') ? 'New movement' : normalized.includes('charity') ? 'New charity' : normalized.includes('club') ? 'New club' : 'New organization';
+  }
 
-  const needsTarget = !['business.create', 'property.buy', 'markets.allocate', 'politics.run_for_office', 'career.apply', 'education.apply', 'education.study', 'misconduct.tax_evasion_attempt', 'misconduct.faction_power_seizure_attempt'].includes(best.actionId);
+  const needsTarget = !['business.create', 'organization.create', 'property.buy', 'markets.allocate', 'politics.run_for_office', 'career.apply', 'education.apply', 'education.study', 'misconduct.tax_evasion_attempt', 'misconduct.faction_power_seizure_attempt'].includes(best.actionId);
   const target = targetMatches[0]?.candidate;
   if (needsTarget && !target) {
     return { requestId: request.requestId, status: 'clarification', modeUsed: 'baseline', confidence: 0.62, requiresConfirmation: false, clarification: 'Which person, business, property, security, case, or organization do you mean?', actions: [], safetyFlags: [], diagnostics: { reason: 'missing_target', proposedVerb: best.actionId } };
@@ -165,8 +170,6 @@ export async function interpretPlayerIntent(world: WorldState, text: string, dom
     },
   };
 
-  // Common, explicit game actions should be instant and reliable even when the native
-  // language model is unavailable or interprets a short phrase poorly.
   const deterministic = fallbackInterpret(request);
   if (deterministic.status === 'proposal' && deterministic.confidence >= 0.82) return deterministic;
 
