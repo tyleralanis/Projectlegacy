@@ -1,6 +1,9 @@
 import { applyAutonomousWorld } from './autonomousWorld';
 import { applyConsequenceWeb } from './consequenceWeb';
 import { allocateId } from './createWorld';
+import { executeDeepSimulationAction } from './deepSimulationActions';
+import { applyDeepSimulationAdvance, normalizeDeepSimulationState } from './deepSimulation';
+import { applyDeepTimeConsequences } from './deepTimeConsequences';
 import { applyFactionAdvance, executeFactionDepth } from './factionDepth';
 import { recordHistory } from './history';
 import { applyImmersionWorld } from './immersionWorld';
@@ -65,10 +68,11 @@ function addTransaction(world: WorldState, kind: string, amountCents: number, me
 }
 
 export function normalizeSupplementalState(source: WorldState): WorldState {
-  const actor = source.characters[source.playerCharacterId];
-  const activeTuition = Object.values(source.education).filter((record) => record.characterId === actor.id && ['higher', 'trade'].includes(record.status) && record.tuitionCentsPerYear > 0);
-  if (activeTuition.length === 0) return source;
-  const world = clone(source);
+  const normalized = normalizeDeepSimulationState(source);
+  const actor = normalized.characters[normalized.playerCharacterId];
+  const activeTuition = Object.values(normalized.education).filter((record) => record.characterId === actor.id && ['higher', 'trade'].includes(record.status) && record.tuitionCentsPerYear > 0);
+  if (activeTuition.length === 0) return normalized;
+  const world = clone(normalized);
   for (const original of activeTuition) {
     const record = world.education[original.id];
     if (!tuitionLiability(world, record.id)) addTuitionBill(world, record.id, annualTuition(world, record.id));
@@ -182,12 +186,13 @@ function hireCEO(source: WorldState, action: IntentAction): ActionResult {
     detailTier: 'standard',
     lastMeaningfulWeek: world.calendar.week,
     professionId: 'profession-chief-executive',
+    competencies: { management, leadership, finance, communication: leadership * 0.82, negotiation: leadership * 0.72 },
   };
 
   const relationshipId = allocateId(world, 'relationship');
   world.relationships[relationshipId] = { id: relationshipId, characterIds: [actor.id, executiveId], kind: 'professional', trust: 45, affection: 28, respect: 62, resentment: 2, lastInteractionWeek: world.calendar.week };
   const careerId = allocateId(world, 'career');
-  world.careers[careerId] = { id: careerId, characterId: executiveId, employerId: nextBusiness.organizationId, title: `CEO of ${nextBusiness.name}`, sector: nextBusiness.sector, weeklySalaryCents: salary, performance: fitScore, satisfaction: 68, weeksInRole: 0, active: true };
+  world.careers[careerId] = { id: careerId, characterId: executiveId, employerId: nextBusiness.organizationId, title: `CEO of ${nextBusiness.name}`, sector: nextBusiness.sector, weeklySalaryCents: salary, performance: fitScore, satisfaction: 68, weeksInRole: 0, active: true, hoursPerWeek: 50, level: 6, department: 'Executive', promotionProgress: 0, organizationStanding: 78 };
   if (organization) {
     organization.leaderId = executiveId;
     if (!organization.memberIds.includes(executiveId)) organization.memberIds.push(executiveId);
@@ -232,6 +237,8 @@ function propose(source: WorldState, action: IntentAction): ActionResult {
 export function executeSupplementalDepth(source: WorldState, action: IntentAction, confirmed = false): ActionResult | null {
   const factionResult = executeFactionDepth(source, action, confirmed);
   if (factionResult) return factionResult;
+  const deepResult = executeDeepSimulationAction(source, action);
+  if (deepResult) return deepResult;
   const trackResult = executeTrackDepth(source, action);
   if (trackResult) return trackResult;
   const relationshipResult = executeRelationshipDepth(source, action, confirmed);
@@ -360,5 +367,7 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
   const immersed = applyImmersionWorld(before, autonomous);
   const consequence = applyConsequenceWeb(before, immersed);
   const tracked = applyTrackDepthAdvance(before, consequence);
-  return applyFactionAdvance(before, tracked);
+  const faction = applyFactionAdvance(before, tracked);
+  const deep = applyDeepSimulationAdvance(before, faction);
+  return applyDeepTimeConsequences(before, deep);
 }

@@ -82,14 +82,15 @@ describe('first serious build release gates', () => {
 
   it('links university-era relationships, banking, companies, politics, scandal, and inheritance', () => {
     let world = createWorld({ seed: 'interconnected-world', startAgeYears: 22, nowISO: '2026-08-19T00:00:00.000Z' });
+    const banker = world.characters['character-riley'];
     world.characters[world.playerCharacterId].cashCents = 100_000_000;
     let result = executeAction(world, { verb: 'business.create', targetIds: [], parameters: { name: 'Mercer Realty', amountCents: 20_000_000, sector: 'Real Estate' } });
     world = result.world;
     const business = Object.values(world.businesses)[0];
     business.valuationCents = 500_000_000;
     business.employees = 8_000;
-    result = executeAction(world, { verb: 'business.raise_capital', targetIds: [business.id], parameters: { equityBps: 1_000, financierId: 'character-riley' } }, true);
-    expect(result.message).toContain("Riley's banking network");
+    result = executeAction(world, { verb: 'business.raise_capital', targetIds: [business.id], parameters: { equityBps: 1_000, financierId: banker.id } }, true);
+    expect(result.message).toContain(`${banker.firstName}'s banking network`);
     world = result.world;
     result = executeAction(world, { verb: 'politics.run_for_office', targetIds: [], parameters: { office: 'Harborview Council', amountCents: 500_000 } });
     expect(result.explanation?.factors.find((factor) => factor.label === 'Economic footprint')?.impact).toBe('positive');
@@ -105,9 +106,10 @@ describe('first serious build release gates', () => {
 
   it('searches and pins across the player world', () => {
     const world = createWorld({ seed: 'world-search', startAgeYears: 18, nowISO: '2026-08-19T00:00:00.000Z' });
-    expect(searchWorld(world, 'Riley')[0].id).toBe('character-riley');
-    expect(toggleFavorite(world, 'character', 'character-riley', 'Riley Chen')).toBe(true);
-    expect(searchWorld(world, 'Riley')[0].pinned).toBe(true);
+    const friend = world.characters['character-riley'];
+    expect(searchWorld(world, friend.firstName)[0].id).toBe(friend.id);
+    expect(toggleFavorite(world, 'character', friend.id, `${friend.firstName} ${friend.lastName}`)).toBe(true);
+    expect(searchWorld(world, friend.firstName)[0].pinned).toBe(true);
   });
 
   it('uses confidence to act, confirm meaning, or return to normal buttons', () => {

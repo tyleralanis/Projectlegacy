@@ -20,6 +20,23 @@ export type Domain =
 export type Severity = 'S0' | 'S1' | 'S2' | 'S3' | 'S4';
 export type FocusArea = 'Academics' | 'Sport' | 'Family' | 'Partner' | 'Job' | 'Startup' | 'Health' | 'Networking' | 'Campaign' | 'Creative Work';
 export type ReputationAudience = 'public' | 'business' | 'employee' | 'political' | 'professional' | 'family' | 'faction';
+export type CompetencyKey =
+  | 'academics'
+  | 'communication'
+  | 'leadership'
+  | 'management'
+  | 'finance'
+  | 'investing'
+  | 'sales'
+  | 'negotiation'
+  | 'technology'
+  | 'trades'
+  | 'law'
+  | 'medicine'
+  | 'athletics'
+  | 'media'
+  | 'politics'
+  | 'parenting';
 
 export interface WorldMetadata { saveId: string; displayName: string; schemaVersion: number; engineVersion: string; contentVersion: string; worldSeed: string; createdAt: string; updatedAt: string; lastCheckpoint: string; generation: number; nextSequence: number; }
 export interface CalendarState { week: number; dateISO: string; }
@@ -29,19 +46,31 @@ export interface Character {
   id: EntityId; firstName: string; lastName: string; birthWeek: number; deathWeek?: number; isAlive: boolean; cityId: EntityId; householdId: EntityId; parentIds: EntityId[]; childIds: EntityId[]; partnerId?: EntityId; cashCents: MoneyCents;
   health: number; mood: number; stress: number; discipline: number; ambition: number; empathy: number; riskTolerance: number; ethics: number; knowledge: number; charisma: number; fitness: number; focuses: FocusArea[]; reputation: Record<ReputationAudience, number>;
   detailTier: 'full' | 'standard' | 'statistical'; lastMeaningfulWeek: number; professionId?: string;
+  competencies?: Partial<Record<CompetencyKey, number>>;
 }
 
 export interface Relationship { id: EntityId; characterIds: [EntityId, EntityId]; kind: 'parent' | 'child' | 'sibling' | 'relative' | 'partner' | 'spouse' | 'friend' | 'acquaintance' | 'professional' | 'rival'; trust: number; affection: number; respect: number; resentment: number; lastInteractionWeek: number; }
 export interface MemoryRecord { id: EntityId; participantIds: EntityId[]; category: string; week: number; valence: number; importance: number; permanent: boolean; unresolved: boolean; visibility: 'private' | 'shared' | 'public'; narrative: string; }
-export interface EducationState { id: EntityId; characterId: EntityId; institutionId: EntityId; status: 'preschool' | 'school' | 'accepted' | 'higher' | 'trade' | 'completed' | 'withdrawn'; startedWeek?: number; level: string; recordedGrade: number; knowledgeGain: number; prestige: number; network: number; tuitionCentsPerYear: MoneyCents; manipulatedCredential: boolean; }
-export interface CareerState { id: EntityId; characterId: EntityId; employerId: EntityId; title: string; sector: string; weeklySalaryCents: MoneyCents; performance: number; satisfaction: number; weeksInRole: number; active: boolean; }
+export interface EducationState {
+  id: EntityId; characterId: EntityId; institutionId: EntityId; status: 'preschool' | 'school' | 'accepted' | 'higher' | 'trade' | 'completed' | 'withdrawn'; startedWeek?: number; level: string; recordedGrade: number; knowledgeGain: number; prestige: number; network: number; tuitionCentsPerYear: MoneyCents; manipulatedCredential: boolean;
+  major?: string; minor?: string; clubs?: EntityId[]; mentorId?: EntityId; sport?: string; athleticLevel?: number; athleticRecognition?: number; scholarshipCents?: MoneyCents;
+}
+export interface CareerState {
+  id: EntityId; characterId: EntityId; employerId: EntityId; title: string; sector: string; weeklySalaryCents: MoneyCents; performance: number; satisfaction: number; weeksInRole: number; active: boolean;
+  hoursPerWeek?: number; level?: number; department?: string; managerId?: EntityId; promotionProgress?: number; organizationStanding?: number;
+}
 
 export interface Organization { id: EntityId; kind: 'business' | 'government' | 'agency' | 'party' | 'charity' | 'school' | 'club' | 'professional' | 'union' | 'faction' | 'security' | 'criminal' | 'other'; name: string; jurisdictionId?: EntityId; resourcesCents: MoneyCents; influence: number; stability: number; memberIds: EntityId[]; leaderId?: EntityId; history: string[]; }
+
+export interface BusinessProductLine {
+  id: EntityId; name: string; priceCents: MoneyCents; unitCostCents: MoneyCents; quality: number; demand: number; reputation: number; maturity: 'new' | 'growing' | 'mature' | 'declining'; active: boolean;
+}
 
 export interface Business {
   id: EntityId; organizationId: EntityId; name: string; sector: string; cityId: EntityId; founderId: EntityId; ownerId?: EntityId; cashCents: MoneyCents; debtCents: MoneyCents; revenueWeeklyCents: MoneyCents; costWeeklyCents: MoneyCents; valuationCents: MoneyCents;
   playerOwnershipBps: number; votingControlBps: number; employees: number; capacity: number; demand: number; quality: number; reputation: number; marketingBps: number; pricePosition: 'value' | 'market' | 'premium'; growthPosture: 'conservative' | 'balanced' | 'aggressive'; delegated: boolean; active: boolean;
   managerName?: string; managerQuality?: number; managerSalaryWeeklyCents?: MoneyCents; personalTimeHours?: number;
+  productLines?: BusinessProductLine[]; marketShare?: number; customerLoyalty?: number; culture?: number; complexity?: number; locations?: number;
 }
 
 export interface PropertyAsset { id: EntityId; name: string; kind: 'residence' | 'condo' | 'single-family' | 'multifamily' | 'commercial' | 'land' | 'development' | 'estate'; cityId: EntityId; ownerId: EntityId; valueCents: MoneyCents; debtCents: MoneyCents; condition: number; occupancy: 'owner' | 'tenant' | 'vacant' | 'construction'; weeklyRentCents: MoneyCents; weeklyCostsCents: MoneyCents; managed: boolean; }

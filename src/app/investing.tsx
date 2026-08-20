@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { EngineActionButton } from '@/components/EngineActionButton';
 import { SubviewHeader } from '@/components/MenuTile';
+import { competency, effectiveInvestingCompetence } from '@/engine/competencies';
 import { formatMoney, holdingValueCents } from '@/engine/money';
 import { getTrackMemory } from '@/engine/trackDepth';
 import { useGame } from '@/state/GameProvider';
@@ -29,13 +30,20 @@ export default function InvestingScreen() {
   const strategyId = strategyMemory?.split(':')[0];
   const strategy = strategies.find((item) => item.id === strategyId);
   const rebalanceMemory = getTrackMemory(world, 'Investing · Last rebalance');
+  const privateDealMemory = Object.values(world.memories).find((memory) => memory.category === 'Opportunity · Private deal flow' && memory.participantIds.includes(actor.id));
+  const investingSkill = competency(world, actor.id, 'investing');
+  const financeSkill = competency(world, actor.id, 'finance');
+  const effectiveSkill = effectiveInvestingCompetence(world, actor.id);
+  const privateHoldings = holdings.filter((holding) => world.securities[holding.securityId]?.sector === 'Private Markets');
+  const publicSecurities = Object.values(world.securities).filter((security) => security.sector !== 'Private Markets');
 
   return (
     <AppScreen>
-      <SubviewHeader eyebrow="Money" title="Investing" subtitle="A portfolio can be an entire life path now: build a philosophy, research companies, concentrate or diversify, change your mind, and live with what the market does afterward." />
+      <SubviewHeader eyebrow="Money" title="Investing" subtitle="Capital allocation is a skill, a network, a temperament, and eventually an institution. Public markets are only the beginning once wealth and relationships create access." />
       <Card accent>
-        <View style={styles.stats}><Stat label="Cash" value={formatMoney(actor.cashCents, true)} /><Stat label="Invested" value={formatMoney(invested, true)} tone="legacy" /><Stat label="Market" value={world.economy.marketIndex.toFixed(1)} /><Stat label="Regime" value={world.economy.regime} /></View>
-        <Body secondary>Policy rate {(world.economy.policyRate * 100).toFixed(1)}% · inflation {(world.economy.inflation * 100).toFixed(1)}%. No fixed historical price path means there is no guaranteed memorized strategy.</Body>
+        <View style={styles.stats}><Stat label="Cash" value={formatMoney(actor.cashCents, true)} /><Stat label="Invested" value={formatMoney(invested, true)} tone="legacy" /><Stat label="Investing skill" value={Math.round(investingSkill).toString()} /><Stat label="Decision quality" value={Math.round(effectiveSkill).toString()} /></View>
+        <View style={styles.stats}><Stat label="Finance" value={Math.round(financeSkill).toString()} /><Stat label="Market" value={world.economy.marketIndex.toFixed(1)} /><Stat label="Regime" value={world.economy.regime} /><Stat label="Policy rate" value={`${(world.economy.policyRate * 100).toFixed(1)}%`} /></View>
+        <Body secondary>Inflation {(world.economy.inflation * 100).toFixed(1)}%. Research and actual investing build competence over time. A credential or large balance does not automatically make the character a good allocator.</Body>
       </Card>
 
       <View style={styles.section}>
@@ -50,15 +58,29 @@ export default function InvestingScreen() {
         </Card>
       </View>
 
+      {privateDealMemory ? <View style={styles.section}>
+        <SectionHeader title="Private market access" action={<StatusPill tone={privateDealMemory.unresolved ? 'warning' : 'success'}>{privateDealMemory.unresolved ? 'Deal open' : 'Network active'}</StatusPill>} />
+        <Card accent>
+          <Heading size="small">Access came from people, not a menu unlock</Heading>
+          <Body secondary>{privateDealMemory.narrative}</Body>
+          {privateDealMemory.unresolved ? <View style={styles.actions}><EngineActionButton title="Invest $25,000" action={{ verb: 'markets.private_deal', targetIds: [], parameters: { amountCents: 2_500_000 } }} tone="accent" style={styles.smallButton} /><EngineActionButton title="Invest $100,000" action={{ verb: 'markets.private_deal', targetIds: [], parameters: { amountCents: 10_000_000 } }} style={styles.smallButton} /></View> : null}
+        </Card>
+        {privateHoldings.map((holding) => {
+          const security = world.securities[holding.securityId];
+          const value = Math.round(holding.unitsMilli * security.priceCents / 1000);
+          return <Card key={holding.id}><View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{security.name}</Heading><Body secondary>Private Markets · illiquid relationship-driven position</Body></View><StatusPill tone="accent">{formatMoney(value, true)}</StatusPill></View><Body secondary>Quality {Math.round(security.quality)} · risk {Math.round(security.volatility)}. Private access increases the universe of things you can own; it does not remove the possibility that the deal is bad.</Body></Card>;
+        })}
+      </View> : null}
+
       <View style={styles.section}>
         <SectionHeader title="Quick allocation" />
-        <Card><Heading size="small">Broad market fund</Heading><Body secondary>A simple diversified allocation when you do not want to pick individual companies.</Body><View style={styles.actions}><EngineActionButton title="Invest $500" action={{ verb: 'markets.allocate', targetIds: [], parameters: { amountCents: 50_000 } }} tone="accent" style={{ flex: 1 }} /><EngineActionButton title="Invest $5,000" action={{ verb: 'markets.allocate', targetIds: [], parameters: { amountCents: 500_000 } }} tone="accent" style={{ flex: 1 }} /></View></Card>
-        <Card><View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">🧑‍💼 Wealth manager</Heading><Body secondary>{hasManager ? 'You already have professional portfolio help.' : 'Always available to ask for; not always affordable. First-year retainer is $48,000.'}</Body></View><StatusPill tone={hasManager ? 'success' : 'neutral'}>{hasManager ? 'Retained' : '$48k/yr'}</StatusPill></View>{!hasManager ? <EngineActionButton title="Hire wealth manager" action={{ verb: 'markets.hire_wealth_manager', targetIds: [], parameters: { amountCents: 4_800_000 } }} tone="accent" /> : null}</Card>
+        <Card><Heading size="small">Broad market fund</Heading><Body secondary>A simple diversified allocation when you do not want every dollar to depend on your stock-picking skill.</Body><View style={styles.actions}><EngineActionButton title="Invest $500" action={{ verb: 'markets.allocate', targetIds: [], parameters: { amountCents: 50_000 } }} tone="accent" style={{ flex: 1 }} /><EngineActionButton title="Invest $5,000" action={{ verb: 'markets.allocate', targetIds: [], parameters: { amountCents: 500_000 } }} tone="accent" style={{ flex: 1 }} /></View></Card>
+        <Card><View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">🧑‍💼 Wealth manager</Heading><Body secondary>{hasManager ? 'Professional help now reduces some of the administrative burden of wealth. You still own the decisions and the outcome.' : 'Always available to ask for; not always affordable. First-year retainer is $48,000.'}</Body></View><StatusPill tone={hasManager ? 'success' : 'neutral'}>{hasManager ? 'Retained' : '$48k/yr'}</StatusPill></View>{!hasManager ? <EngineActionButton title="Hire wealth manager" action={{ verb: 'markets.hire_wealth_manager', targetIds: [], parameters: { amountCents: 4_800_000 } }} tone="accent" /> : null}</Card>
       </View>
 
       <View style={styles.section}>
-        <SectionHeader title="Public market" action={<StatusPill>{Object.keys(world.securities).length}</StatusPill>} />
-        {Object.values(world.securities).map((security) => {
+        <SectionHeader title="Public market" action={<StatusPill>{publicSecurities.length}</StatusPill>} />
+        {publicSecurities.map((security) => {
           const holding = holdings.find((item) => item.securityId === security.id);
           const value = holding ? Math.round(holding.unitsMilli * security.priceCents / 1000) : 0;
           const thesis = getTrackMemory(world, `Investing · ${security.symbol} thesis`);

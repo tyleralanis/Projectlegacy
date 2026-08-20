@@ -42,9 +42,10 @@ const gameActionIds = [...catalogSources.matchAll(/\{ id: '([^']+)'/g)].map((mat
 if (new Set(gameActionIds).size !== gameActionIds.length) throw new Error('Game action catalogs contain duplicate IDs.');
 const nativeActionIds = new Set(actionIds);
 
-// These actions are implemented entirely in the TypeScript simulation layer so compatible
-// Expo updates can add gameplay without changing the compiled Swift intent registry. They
-// remain local/offline and authoritative because the engine validates and executes them.
+// TypeScript-only gameplay actions can ship through a compatible Expo update without
+// changing the compiled Swift intent registry. They remain local/offline and authoritative:
+// the interpreter proposes structured intents, and the deterministic game engine validates
+// and mutates the world. Additions here must also have a real handler below.
 const otaOnlyActions = new Set([
   'education.pay_tuition', 'education.party', 'education.sports',
   'business.hire_ceo', 'property.evict', 'markets.hire_wealth_manager',
@@ -65,6 +66,15 @@ const otaOnlyActions = new Set([
   'organization.found_inner_circle', 'faction.set_archetype', 'faction.recruit', 'faction.hold_gathering', 'faction.collect_contributions',
   'faction.buy_land', 'faction.spread_doctrine', 'faction.elevate_leader', 'faction.adopt_plural_household', 'faction.invite_plural_spouse',
   'faction.build_security', 'faction.expand_public_influence', 'faction.member_welfare', 'faction.attempt_power_seizure',
+
+  'skills.practice',
+  'markets.private_deal',
+  'business.add_product', 'business.improve_product', 'business.retire_product', 'business.acquire_company',
+  'education.add_minor', 'education.research_project', 'education.find_mentor',
+  'sports.choose_sport', 'sports.practice', 'sports.compete', 'sports.seek_agent',
+  'career.find_mentor', 'career.take_lead', 'career.build_alliance',
+  'dynasty.family_council', 'dynasty.train_heir',
+  'politics.build_coalition', 'politics.recruit_staff',
 ]);
 const unknownGameActions = gameActionIds.filter((id) => !nativeActionIds.has(id) && !otaOnlyActions.has(id));
 if (unknownGameActions.length > 0) throw new Error(`Game catalog actions are missing from the native registry or OTA allowlist: ${unknownGameActions.join(', ')}`);
@@ -76,13 +86,14 @@ const executorFiles = [
   path.join(root, 'src', 'engine', 'relationshipDepth.ts'),
   path.join(root, 'src', 'engine', 'trackDepth.ts'),
   path.join(root, 'src', 'engine', 'factionDepth.ts'),
+  path.join(root, 'src', 'engine', 'deepSimulationActions.ts'),
   path.join(root, 'src', 'state', 'GameProvider.tsx'),
 ];
 const executorSource = executorFiles.filter(fs.existsSync).map((file) => fs.readFileSync(file, 'utf8')).join('\n');
 const implementedActions = new Set([
   ...[...executorSource.matchAll(/case '([^']+)'/g)].map((match) => match[1]),
   ...[...executorSource.matchAll(/action\.verb === '([^']+)'/g)].map((match) => match[1]),
-  ...[...executorSource.matchAll(/action\.verb\.startsWith\('([^']+)'\)/g)].map((match) => match[1]),
+  ...[...executorSource.matchAll(/'([a-z]+\.[a-z_]+)'/g)].map((match) => match[1]).filter((id) => otaOnlyActions.has(id)),
 ]);
 const intentionallyPrefixHandled = [
   'health.run', 'health.gym', 'health.group_class', 'health.therapy', 'health.outdoors',

@@ -6,8 +6,9 @@ import { allocateId, createWorld } from '@/engine/createWorld';
 import { executeDepthAction } from '@/engine/depthActions';
 import { runDeveloperCommand, type DeveloperCommand } from '@/engine/developerTools';
 import { netWorthCents } from '@/engine/money';
-import { activityLevel, advanceWorld, resolveEvent } from '@/engine/simulation';
-import { applySupplementalAdvance, executeSupplementalDepth, normalizeSupplementalState } from '@/engine/supplementalDepth';
+import { activityLevel, advanceWorld } from '@/engine/simulation';
+import { resolveEvent } from '@/engine/simulationEventBridge';
+import { applySupplementalAdvance, executeSupplementalDepth, normalizeSupplementalState } from '@/engine/supplementalDepthBridge';
 import type { AdvanceSummary, FavoriteEntityType, FocusArea, GameSettings, IntentAction, IntentAuditEntry, OutcomeExplanation, WorldState } from '@/engine/types';
 import { toggleFavorite } from '@/engine/worldIndex';
 import { createRepository } from '@/storage';
@@ -203,7 +204,7 @@ export function GameProvider({ children }: React.PropsWithChildren) {
 
       const requestedCapital = typeof action.parameters.amountCents === 'number'
         ? Math.max(0, Math.round(action.parameters.amountCents))
-        : Math.min(actor.cashCents, 100_000);
+        : Math.max(0, Math.min(actor.cashCents, 100_000));
       if (requestedCapital > actor.cashCents) return { completed: false, message: 'You do not have enough liquid cash to fund that organization.', requiresConfirmation: false };
 
       const next = JSON.parse(JSON.stringify(world)) as WorldState;
@@ -289,7 +290,7 @@ export function GameProvider({ children }: React.PropsWithChildren) {
 
   const newLife = useCallback(async (options: NewLifeOptions) => {
     await runBusy(async () => {
-      const next = createWorld(options);
+      const next = normalizeSupplementalState(createWorld(options));
       await persist(next);
       setLastSummary(null);
       setLastExplanation(null);
@@ -323,7 +324,7 @@ export function GameProvider({ children }: React.PropsWithChildren) {
     if (!repositoryRef.current) return;
     await runBusy(async () => {
       await repositoryRef.current!.deleteAll();
-      const fresh = createWorld({ seed: `legacy-${Date.now()}`, startAgeYears: 0 });
+      const fresh = normalizeSupplementalState(createWorld({ seed: `legacy-${Date.now()}`, startAgeYears: 0 }));
       await repositoryRef.current!.saveWorld(fresh);
       setWorld(fresh);
       worldRef.current = fresh;

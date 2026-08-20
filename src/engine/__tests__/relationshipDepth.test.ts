@@ -85,7 +85,14 @@ describe('relationship depth and consequence web', () => {
     expect(relationshipLoanBalance(loan.world, 'character-mara')).toBe(100_000);
     expect(Object.values(loan.world.memories).some((memory) => memory.category === 'Obligation · Loan' && memory.unresolved)).toBe(true);
 
-    loan.world.characters['character-mara'].cashCents = 500_000;
+    const sibling = loan.world.characters['character-mara'];
+    const relationship = loan.world.relationships['relationship-player-sibling'];
+    sibling.cashCents = 500_000;
+    sibling.discipline = 92;
+    sibling.ethics = 92;
+    relationship.trust = 90;
+    relationship.respect = 90;
+    relationship.resentment = 0;
     const repayment = executeRelationshipDepth(loan.world, { verb: 'relationship.collect_loan', targetIds: ['character-mara'], parameters: { amountCents: 100_000 } })!;
     expect(relationshipLoanBalance(repayment.world, 'character-mara')).toBe(0);
   });
