@@ -3,6 +3,7 @@ import { applyContinuityPolish } from './continuityPolish';
 import { applyDelegationAdvance, executeDelegationDepth, prepareDelegationAdvance } from './delegationDepth';
 import { normalizeDelegatedWorld } from './delegationNormalize';
 import { executeSecondarySchoolApplication } from './educationApplicationBridge';
+import { applyLegalPolish } from './legalPolish';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
 import { executeRebalancePolish } from './rebalancePolish';
 import {
@@ -54,8 +55,7 @@ export function executeSupplementalDepth(
  * Renewal state is prepared before the older supplemental pass so legacy
  * expiry logic sees a paid-forward membership. Base systems then run once,
  * followed by recurring life systems, owner/manager delegation, existing-
- * system economic polish, and continuity that keeps NPC wealth, politics,
- * and succession moving even when the player is focused elsewhere.
+ * system economic polish, cross-life continuity, and legal-case progression.
  */
 export function applySupplementalAdvance(before: WorldState, after: WorldState): WorldState {
   const prepared = prepareDelegationAdvance(before, after);
@@ -63,5 +63,6 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
   const life = applyLifeSystemsAdvance(before, base);
   const delegated = applyDelegationAdvance(before, life);
   const polished = applySystemPolishAdvance(before, delegated);
-  return applyContinuityPolish(before, polished);
+  const continuous = applyContinuityPolish(before, polished);
+  return applyLegalPolish(before, continuous);
 }
