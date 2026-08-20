@@ -10,9 +10,9 @@ export function EngineActionButton({ title, action, tone = 'neutral', style }: {
   const run = async (confirmed = false) => {
     const result = await performAction(action, confirmed);
     if (result.requiresConfirmation) {
-      Alert.alert('Confirm action', result.message, [
+      Alert.alert(`${title}?`, 'This action will take effect immediately.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Confirm', style: action.destructive ? 'destructive' : 'default', onPress: () => { void run(true); } },
+        { text: title, style: action.destructive ? 'destructive' : 'default', onPress: () => { void run(true); } },
       ]);
     } else if (!result.completed) Alert.alert('Action unavailable', result.message);
   };

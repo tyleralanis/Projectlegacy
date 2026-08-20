@@ -80,7 +80,7 @@ export function GameProvider({ children }: React.PropsWithChildren) {
         repositoryRef.current = repository;
         await repository.initialize();
         const saved = await repository.loadLatest();
-        const initial = saved ?? createWorld({ seed: 'legacy-harborview-001', startAgeYears: 18 });
+        const initial = saved ?? createWorld({ seed: 'legacy-harborview-001', startAgeYears: 0 });
         if (!saved) await repository.saveWorld(initial);
         if (mounted) {
           setWorld(initial);
@@ -128,7 +128,7 @@ export function GameProvider({ children }: React.PropsWithChildren) {
       await persist(result.world);
       setLastSummary(result.summary);
       setLastExplanation(result.summary.explanation ?? null);
-      setMessage(result.summary.interruptedByEventId ? 'A major event needs your decision.' : result.summary.highlights[0] ?? 'Time advanced.');
+      setMessage(result.summary.interruptedByEventId ? 'A major decision needs your attention.' : result.summary.highlights[0] ?? 'Time advanced.');
       if (world.settings.hapticsEnabled) {
         await Haptics.notificationAsync(result.summary.interruptedByEventId ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success);
       }
@@ -138,7 +138,46 @@ export function GameProvider({ children }: React.PropsWithChildren) {
   const resolveActiveEvent = useCallback(async (eventId: string, choiceId: string) => {
     if (!world) return;
     await runBusy(async () => {
+      const event = world.events.find((item) => item.id === eventId && !item.resolved);
+      if (!event) {
+        setMessage('That decision is no longer active.');
+        return;
+      }
+
+      let capacityBusinessId: string | undefined;
+      if (event.templateId === 'business.capacity') {
+        const business = Object.values(world.businesses).find((item) => event.participantIds.includes(item.organizationId) && item.active);
+        if (business) {
+          capacityBusinessId = business.id;
+          if (choiceId === 'hire') {
+            const hires = Math.max(1, Math.ceil(business.employees * 0.25));
+            const hiringCost = hires * 175_000;
+            if (business.cashCents < hiringCost) {
+              setMessage(`${business.name} needs ${(hiringCost / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })} in company cash to make that hiring move. Add capital, borrow, raise funds, or choose another response.`);
+              return;
+            }
+          }
+          if (choiceId === 'delegate' && business.cashCents < 250_000) {
+            setMessage(`${business.name} needs $2,500 in company cash to put day-to-day operations under management.`);
+            return;
+          }
+        }
+      }
+
       const next = resolveEvent(world, eventId, choiceId);
+      if (event.templateId === 'business.capacity' && capacityBusinessId) {
+        const business = next.businesses[capacityBusinessId];
+        if (business) {
+          if (choiceId === 'delegate') business.cashCents -= 250_000;
+          if (choiceId === 'raise-price') business.demand = Math.min(business.demand, business.capacity * 1.12);
+          if (choiceId === 'reduce-marketing') business.demand = Math.min(business.demand, business.capacity * 1.1);
+          if (choiceId === 'delegate') {
+            business.capacity = Math.max(business.capacity, Math.round(business.capacity * 1.08));
+            business.demand = Math.min(business.demand, business.capacity * 1.14);
+          }
+        }
+      }
+
       await persist(next);
       setMessage('Your decision is now part of the world.');
       if (world.settings.hapticsEnabled) await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -147,6 +186,60 @@ export function GameProvider({ children }: React.PropsWithChildren) {
 
   const performAction = useCallback(async (action: IntentAction, confirmed = false) => {
     if (!world) return { completed: false, message: 'The world is not ready.', requiresConfirmation: false };
+
+    if (action.verb === 'organization.create') {
+      const actor = world.characters[world.playerCharacterId];
+      const age = Math.max(0, Math.floor((world.calendar.week - actor.birthWeek) / 52));
+      if (age < 14) return { completed: false, message: 'You are not old enough to start an independent organization yet.', requiresConfirmation: false };
+
+      const requestedCapital = typeof action.parameters.amountCents === 'number'
+        ? Math.max(0, Math.round(action.parameters.amountCents))
+        : Math.min(actor.cashCents, 100_000);
+      if (requestedCapital > actor.cashCents) return { completed: false, message: 'You do not have enough liquid cash to fund that organization.', requiresConfirmation: false };
+
+      const next = JSON.parse(JSON.stringify(world)) as WorldState;
+      const nextActor = next.characters[next.playerCharacterId];
+      const organizationId = allocateId(next, 'organization');
+      const requestedKind = action.parameters.kind;
+      const validKinds = ['club', 'charity', 'party', 'professional', 'faction', 'security', 'other'] as const;
+      const kind = typeof requestedKind === 'string' && (validKinds as readonly string[]).includes(requestedKind)
+        ? requestedKind as (typeof validKinds)[number]
+        : 'other';
+      const requestedName = action.parameters.name;
+      const name = typeof requestedName === 'string' && requestedName.trim()
+        ? requestedName.trim().slice(0, 60)
+        : `${nextActor.lastName} Group`;
+
+      nextActor.cashCents -= requestedCapital;
+      next.organizations[organizationId] = {
+        id: organizationId,
+        kind,
+        name,
+        resourcesCents: requestedCapital,
+        influence: 8,
+        stability: 45,
+        memberIds: [nextActor.id],
+        leaderId: nextActor.id,
+        history: [`Founded by ${nextActor.firstName} ${nextActor.lastName} in week ${next.calendar.week}.`],
+      };
+      next.transactions.push({
+        id: allocateId(next, 'transaction'),
+        week: next.calendar.week,
+        kind: 'organization-funding',
+        amountCents: -requestedCapital,
+        fromId: nextActor.id,
+        toId: organizationId,
+        memo: `Founded ${name}`,
+      });
+      const resultMessage = `${name} is now part of the world.`;
+      await runBusy(async () => {
+        await persist(next);
+        setMessage(resultMessage);
+        if (world.settings.hapticsEnabled) await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      });
+      return { completed: true, message: resultMessage, requiresConfirmation: false };
+    }
+
     const result = executeAction(world, action, confirmed);
     if (result.validation.requiresConfirmation && !confirmed) return { completed: false, message: result.message, requiresConfirmation: true, explanation: result.explanation };
     if (!result.validation.valid) return { completed: false, message: result.message, requiresConfirmation: false, explanation: result.explanation };
@@ -165,7 +258,7 @@ export function GameProvider({ children }: React.PropsWithChildren) {
       await persist(next);
       setLastSummary(null);
       setLastExplanation(null);
-      setMessage('A new local world has begun.');
+      setMessage(options.startAgeYears === 0 ? 'A new life has begun.' : `A new life has begun at age ${options.startAgeYears}.`);
     });
   }, [persist, runBusy]);
 
@@ -195,13 +288,13 @@ export function GameProvider({ children }: React.PropsWithChildren) {
     if (!repositoryRef.current) return;
     await runBusy(async () => {
       await repositoryRef.current!.deleteAll();
-      const fresh = createWorld({ seed: `legacy-${Date.now()}`, startAgeYears: 18 });
+      const fresh = createWorld({ seed: `legacy-${Date.now()}`, startAgeYears: 0 });
       await repositoryRef.current!.saveWorld(fresh);
       setWorld(fresh);
       worldRef.current = fresh;
       setLastSummary(null);
       setLastExplanation(null);
-      setMessage('All prior local saves and diagnostics were deleted. A fresh world was created.');
+      setMessage('All prior local saves and diagnostics were deleted. A new life has begun at birth.');
     });
   }, [runBusy]);
 

@@ -43,6 +43,7 @@ export const ACTION_CATALOG: ActionDefinition[] = [
   { id: 'markets.buy', domain: 'markets', label: 'Buy', summary: 'Buy a generated public security.' },
   { id: 'markets.sell', domain: 'markets', label: 'Sell', summary: 'Sell a generated public security.' },
   { id: 'markets.allocate', domain: 'markets', label: 'Auto-allocate', summary: 'Invest cash into the diversified market fund.' },
+  { id: 'organization.create', domain: 'organization', label: 'Start an organization', summary: 'Create a club, movement, charity, political group, or other organization.' },
   { id: 'organization.join', domain: 'organization', label: 'Join', summary: 'Seek membership in an organization.' },
   { id: 'organization.fund', domain: 'organization', label: 'Fund', summary: 'Contribute resources to an organization.' },
   { id: 'organization.take_control_attempt', domain: 'organization', label: 'Attempt control', summary: 'Attempt a strategic, abstract change of control.', destructive: true, confirmationMandatory: true },
