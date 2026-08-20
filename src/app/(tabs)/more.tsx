@@ -5,12 +5,21 @@ import { Alert, StyleSheet, Switch, TextInput, View } from 'react-native';
 
 import PRODUCT from '../../../config/product.json';
 
+import { EngineActionButton } from '@/components/EngineActionButton';
 import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { formatMoney } from '@/engine/money';
 import { getLegacyAICapabilities } from '@/services/intentService';
 import { useGame } from '@/state/GameProvider';
-import { AppScreen, Body, Card, Eyebrow, Heading, PrimaryButton, SectionHeader, Stat, StatusPill } from '@/ui/components';
+import { AppScreen, Body, Card, Eyebrow, Heading, PrimaryButton, ProgressBar, SectionHeader, Stat, StatusPill } from '@/ui/components';
 import { radius, spacing, useAppTheme } from '@/ui/theme';
+
+function qualitative(value: number): string {
+  if (value >= 75) return 'Very high';
+  if (value >= 55) return 'High';
+  if (value >= 35) return 'Moderate';
+  if (value >= 18) return 'Low';
+  return 'Very low';
+}
 
 export default function MoreScreen() {
   const { world, busy, exportSave, importSave, deleteAllData, updateSettings, newLife } = useGame();
@@ -24,7 +33,9 @@ export default function MoreScreen() {
   if (!world) return null;
   const actor = world.characters[world.playerCharacterId];
   const cases = Object.values(world.legalCases).filter((legalCase) => legalCase.characterId === actor.id);
+  const activeCases = cases.filter((legalCase) => legalCase.stage !== 'resolved');
   const exposures = Object.values(world.exposures).filter((exposure) => exposure.characterId === actor.id);
+  const openExposures = exposures.filter((exposure) => !exposure.resolved);
 
   const confirmNewLife = (startAgeYears: number) => {
     Alert.alert('Start a new local world?', 'The current save stays on this device until you delete it. The new world becomes the active save.', [
@@ -49,8 +60,38 @@ export default function MoreScreen() {
       </View>
 
       <View style={styles.section}>
-        <SectionHeader title="Legal exposure" action={<StatusPill tone={exposures.some((exposure) => !exposure.resolved) ? 'warning' : 'success'}>{cases.length} cases · {exposures.length} records</StatusPill>} />
-        {exposures.length === 0 ? <Card><Body secondary>No evidence or misconduct exposure is recorded for the active character.</Body></Card> : exposures.map((exposure) => <Card key={exposure.id}><View style={styles.row}><Heading size="small">{exposure.category.replaceAll('.', ' ')}</Heading><StatusPill tone={exposure.discovered ? 'danger' : 'warning'}>{exposure.discovered ? 'Discovered' : 'Hidden exposure'}</StatusPill></View><Body secondary>Evidence {Math.round(exposure.evidence)} · severity {Math.round(exposure.severity)} · created week {exposure.createdWeek}</Body></Card>)}
+        <SectionHeader title="Legal" action={<StatusPill tone={activeCases.length > 0 ? 'danger' : openExposures.length > 0 ? 'warning' : 'success'}>{activeCases.length} active · {openExposures.length} exposure{openExposures.length === 1 ? '' : 's'}</StatusPill>} />
+        {activeCases.length === 0 && openExposures.length === 0 ? <Card><Heading size="small">Nothing active</Heading><Body secondary>No unresolved legal exposure or active case is recorded for the current character.</Body></Card> : null}
+
+        {activeCases.map((legalCase) => {
+          const exposure = world.exposures[legalCase.exposureId];
+          const riskText = world.settings.qualitativeRiskOnly ? qualitative(legalCase.risk) : `${Math.round(legalCase.risk)}/100`;
+          const update = Object.values(world.memories).find((memory) => memory.category === `Legal · Case update · ${legalCase.id}`);
+          return <Card key={legalCase.id} accent>
+            <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">Active {legalCase.stage}</Heading><Body secondary>{exposure?.category.replaceAll('.', ' ') ?? 'Legal matter'}</Body></View><StatusPill tone={legalCase.risk >= 70 ? 'danger' : legalCase.risk >= 45 ? 'warning' : 'accent'}>{riskText} risk</StatusPill></View>
+            <View style={styles.stats}><Stat label="Stage" value={legalCase.stage} /><Stat label="Counsel" value={`${Math.round(legalCase.counselQuality)}/100`} /><Stat label="Evidence" value={world.settings.qualitativeRiskOnly ? qualitative(exposure?.evidence ?? 0) : `${Math.round(exposure?.evidence ?? 0)}/100`} /><Stat label="Severity" value={world.settings.qualitativeRiskOnly ? qualitative(exposure?.severity ?? 0) : `${Math.round(exposure?.severity ?? 0)}/100`} /></View>
+            <ProgressBar value={legalCase.risk} tone={legalCase.risk >= 70 ? 'danger' : 'legacy'} />
+            {update ? <Body secondary>{update.narrative}</Body> : <Body secondary>The matter will now progress on recurring quarterly checks. Evidence, severity, counsel, prior legal choices, cost, and uncertainty all continue to matter after the first event.</Body>}
+            <View style={styles.actions}>
+              <EngineActionButton title="Strengthen counsel · $15k" action={{ verb: 'legal.hire_counsel', targetIds: [legalCase.id], parameters: { amountCents: 1_500_000 } }} tone="accent" style={styles.actionButton} />
+              <EngineActionButton title="Cooperate" action={{ verb: 'legal.cooperate', targetIds: [legalCase.id], parameters: {} }} style={styles.actionButton} />
+              <EngineActionButton title="Contest" action={{ verb: 'legal.contest', targetIds: [legalCase.id], parameters: {} }} style={styles.actionButton} />
+            </View>
+            <Body secondary>Premium counsel can create ongoing case costs. A legal action changes the risk trajectory; it does not erase the underlying evidence.</Body>
+          </Card>;
+        })}
+
+        {cases.filter((legalCase) => legalCase.stage === 'resolved').slice(-3).map((legalCase) => <Card key={legalCase.id}>
+          <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">Resolved matter</Heading><Body secondary>{world.exposures[legalCase.exposureId]?.category.replaceAll('.', ' ') ?? 'Legal case'}</Body></View><StatusPill tone={legalCase.outcome === 'convicted' ? 'danger' : legalCase.outcome === 'settled' ? 'warning' : 'success'}>{legalCase.outcome ?? 'resolved'}</StatusPill></View>
+          <Body secondary>The case is over, but the financial, reputation, relationship, political, and historical consequences remain in the world.</Body>
+        </Card>)}
+
+        {openExposures.filter((exposure) => !exposure.discovered).map((exposure) => <Card key={exposure.id}>
+          <View style={styles.row}><Heading size="small">Unresolved exposure</Heading><StatusPill tone="warning">Not discovered</StatusPill></View>
+          <Body secondary>{exposure.category.replaceAll('.', ' ')}</Body>
+          <Body secondary>{world.settings.qualitativeRiskOnly ? `Evidence appears ${qualitative(exposure.evidence).toLowerCase()} and discoverability appears ${qualitative(exposure.discoverability).toLowerCase()}.` : `Evidence ${Math.round(exposure.evidence)} · severity ${Math.round(exposure.severity)} · discoverability ${Math.round(exposure.discoverability)} · created week ${exposure.createdWeek}.`}</Body>
+          <Body secondary>Old exposure remains in the simulation even when nobody is currently investigating it. Time does not automatically wipe the record clean.</Body>
+        </Card>)}
       </View>
 
       <View style={styles.section}>
@@ -118,5 +159,6 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   setting: { minHeight: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  actionButton: { flexGrow: 1, flexBasis: 130 },
   input: { minHeight: 48, flex: 1, minWidth: 130, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 13, fontSize: 15 },
 });

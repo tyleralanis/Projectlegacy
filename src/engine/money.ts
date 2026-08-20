@@ -12,13 +12,33 @@ export function clampCents(amount: number): MoneyCents {
   return Math.max(-9_000_000_000_000_000, Math.min(9_000_000_000_000_000, Math.round(amount)));
 }
 
+function compactDollars(amount: number): string {
+  const absolute = Math.abs(amount);
+  const sign = amount < 0 ? '-' : '';
+  const scales = [
+    { threshold: 1_000_000_000_000_000, suffix: 'Q' },
+    { threshold: 1_000_000_000_000, suffix: 'T' },
+    { threshold: 1_000_000_000, suffix: 'B' },
+    { threshold: 1_000_000, suffix: 'M' },
+    { threshold: 1_000, suffix: 'K' },
+  ] as const;
+  const scale = scales.find((item) => absolute >= item.threshold);
+  if (!scale) {
+    return `${sign}$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(absolute)}`;
+  }
+  const scaled = absolute / scale.threshold;
+  const digits = scaled >= 100 ? 0 : scaled >= 10 ? 1 : 2;
+  const formatted = new Intl.NumberFormat('en-US', { maximumFractionDigits: digits, minimumFractionDigits: 0 }).format(scaled);
+  return `${sign}$${formatted}${scale.suffix}`;
+}
+
 export function formatMoney(amountCents: MoneyCents, compact = false): string {
   const amount = amountCents / 100;
+  if (compact) return compactDollars(amount);
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    notation: compact ? 'compact' : 'standard',
-    maximumFractionDigits: compact ? 1 : 0,
+    maximumFractionDigits: 0,
   }).format(amount);
 }
 

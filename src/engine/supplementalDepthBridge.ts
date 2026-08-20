@@ -1,8 +1,11 @@
 import { executeCareerApplication } from './careerApplicationBridge';
+import { applyContinuityPolish } from './continuityPolish';
 import { applyDelegationAdvance, executeDelegationDepth, prepareDelegationAdvance } from './delegationDepth';
 import { normalizeDelegatedWorld } from './delegationNormalize';
 import { executeSecondarySchoolApplication } from './educationApplicationBridge';
+import { applyLegalPolish } from './legalPolish';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
+import { executeRebalancePolish } from './rebalancePolish';
 import {
   applySupplementalAdvance as applyBaseSupplementalAdvance,
   ceoCandidates,
@@ -11,6 +14,8 @@ import {
   hasGymMembership,
   normalizeSupplementalState as normalizeBaseSupplementalState,
 } from './supplementalDepth';
+import { applySystemPolishAdvance } from './systemPolish';
+import { executeSystemPolishAction } from './systemPolishActions';
 import type { ActionResult, IntentAction, WorldState } from './types';
 
 export { ceoCandidates, getTuitionBalance, hasGymMembership };
@@ -22,15 +27,19 @@ export function normalizeSupplementalState(source: WorldState): WorldState {
 
 /**
  * OTA-safe extension point for life systems that were added after the original
- * supplemental engine grew large. Keeping the bridge tiny lets the app route
- * every player action through the newest local simulation without duplicating
- * the older tuition, CEO, relationship, faction, and track handlers.
+ * supplemental engine grew large. Existing verbs that needed better economics
+ * or consequence modeling are intercepted first; no new menu-only duplicate
+ * actions are required for the polish pass.
  */
 export function executeSupplementalDepth(
   source: WorldState,
   action: IntentAction,
   confirmed = false,
 ): ActionResult | null {
+  const rebalance = executeRebalancePolish(source, action);
+  if (rebalance) return rebalance;
+  const polished = executeSystemPolishAction(source, action);
+  if (polished) return polished;
   const earlyApplication = executeSecondarySchoolApplication(source, action);
   if (earlyApplication) return earlyApplication;
   const careerApplication = executeCareerApplication(source, action);
@@ -45,11 +54,15 @@ export function executeSupplementalDepth(
 /**
  * Renewal state is prepared before the older supplemental pass so legacy
  * expiry logic sees a paid-forward membership. Base systems then run once,
- * followed by recurring life systems and finally owner/manager delegation.
+ * followed by recurring life systems, owner/manager delegation, existing-
+ * system economic polish, cross-life continuity, and legal-case progression.
  */
 export function applySupplementalAdvance(before: WorldState, after: WorldState): WorldState {
   const prepared = prepareDelegationAdvance(before, after);
   const base = applyBaseSupplementalAdvance(before, prepared);
   const life = applyLifeSystemsAdvance(before, base);
-  return applyDelegationAdvance(before, life);
+  const delegated = applyDelegationAdvance(before, life);
+  const polished = applySystemPolishAdvance(before, delegated);
+  const continuous = applyContinuityPolish(before, polished);
+  return applyLegalPolish(before, continuous);
 }
