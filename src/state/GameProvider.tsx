@@ -5,7 +5,9 @@ import { executeAction } from '@/engine/actions';
 import { allocateId, createWorld } from '@/engine/createWorld';
 import { executeDepthAction } from '@/engine/depthActions';
 import { runDeveloperCommand, type DeveloperCommand } from '@/engine/developerTools';
+import { netWorthCents } from '@/engine/money';
 import { activityLevel, advanceWorld, resolveEvent } from '@/engine/simulation';
+import { applySupplementalAdvance, executeSupplementalDepth, normalizeSupplementalState } from '@/engine/supplementalDepth';
 import type { AdvanceSummary, FavoriteEntityType, FocusArea, GameSettings, IntentAction, IntentAuditEntry, OutcomeExplanation, WorldState } from '@/engine/types';
 import { toggleFavorite } from '@/engine/worldIndex';
 import { createRepository } from '@/storage';
@@ -81,8 +83,9 @@ export function GameProvider({ children }: React.PropsWithChildren) {
         repositoryRef.current = repository;
         await repository.initialize();
         const saved = await repository.loadLatest();
-        const initial = saved ?? createWorld({ seed: 'legacy-harborview-001', startAgeYears: 0 });
-        if (!saved) await repository.saveWorld(initial);
+        const raw = saved ?? createWorld({ seed: 'legacy-harborview-001', startAgeYears: 0 });
+        const initial = normalizeSupplementalState(raw);
+        if (!saved || initial !== raw) await repository.saveWorld(initial);
         if (mounted) {
           setWorld(initial);
           worldRef.current = initial;
@@ -125,8 +128,13 @@ export function GameProvider({ children }: React.PropsWithChildren) {
   const advance = useCallback(async (weeks: number) => {
     if (!world) return;
     await runBusy(async () => {
+      const beforeCash = world.characters[world.playerCharacterId].cashCents;
+      const beforeWorth = netWorthCents(world);
       const result = advanceWorld(world, weeks, { interrupt: true, autoResolveEvents: true });
-      await persist(result.world);
+      const enriched = applySupplementalAdvance(world, result.world);
+      result.summary.cashDeltaCents = enriched.characters[enriched.playerCharacterId].cashCents - beforeCash;
+      result.summary.netWorthDeltaCents = netWorthCents(enriched) - beforeWorth;
+      await persist(enriched);
       setLastSummary(result.summary);
       setLastExplanation(result.summary.explanation ?? null);
       setMessage(result.summary.interruptedByEventId ? 'A major decision needs your attention.' : result.summary.highlights[0] ?? 'Time advanced.');
@@ -241,6 +249,19 @@ export function GameProvider({ children }: React.PropsWithChildren) {
       return { completed: true, message: resultMessage, requiresConfirmation: false };
     }
 
+    const supplementalResult = executeSupplementalDepth(world, action, confirmed);
+    if (supplementalResult) {
+      if (supplementalResult.validation.requiresConfirmation && !confirmed) return { completed: false, message: supplementalResult.message, requiresConfirmation: true, explanation: supplementalResult.explanation };
+      if (!supplementalResult.validation.valid) return { completed: false, message: supplementalResult.message, requiresConfirmation: false, explanation: supplementalResult.explanation };
+      await runBusy(async () => {
+        await persist(supplementalResult.world);
+        setMessage(supplementalResult.message);
+        setLastExplanation(supplementalResult.explanation ?? null);
+        if (world.settings.hapticsEnabled) await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      });
+      return { completed: true, message: supplementalResult.message, requiresConfirmation: false, explanation: supplementalResult.explanation };
+    }
+
     const depthResult = executeDepthAction(world, action, confirmed);
     if (depthResult) {
       if (depthResult.validation.requiresConfirmation && !confirmed) return { completed: false, message: depthResult.message, requiresConfirmation: true, explanation: depthResult.explanation };
@@ -288,7 +309,7 @@ export function GameProvider({ children }: React.PropsWithChildren) {
   const importSave = useCallback(async () => {
     if (!repositoryRef.current) throw new Error('The local save repository is not ready.');
     await runBusy(async () => {
-      const imported = await repositoryRef.current!.importWorld();
+      const imported = normalizeSupplementalState(await repositoryRef.current!.importWorld());
       await repositoryRef.current!.saveWorld(imported);
       setWorld(imported);
       worldRef.current = imported;
@@ -319,10 +340,11 @@ export function GameProvider({ children }: React.PropsWithChildren) {
       await repositoryRef.current!.deleteSave(saveId);
       const next = saveId === world.metadata.saveId ? await repositoryRef.current!.loadLatest() : world;
       if (!next) throw new Error('No save remains to open.');
-      setWorld(next);
-      worldRef.current = next;
+      const normalized = normalizeSupplementalState(next);
+      setWorld(normalized);
+      worldRef.current = normalized;
       setSaves(await repositoryRef.current!.listSaves());
-      setCheckpoints(await repositoryRef.current!.listCheckpoints(next.metadata.saveId));
+      setCheckpoints(await repositoryRef.current!.listCheckpoints(normalized.metadata.saveId));
       setMessage('The selected save slot was deleted.');
     });
   }, [runBusy, saves.length, world]);
@@ -332,19 +354,20 @@ export function GameProvider({ children }: React.PropsWithChildren) {
     await runBusy(async () => {
       const selected = await repositoryRef.current!.loadSave(saveId);
       if (!selected) throw new Error('That save slot no longer exists.');
-      setWorld(selected);
-      worldRef.current = selected;
+      const normalized = normalizeSupplementalState(selected);
+      setWorld(normalized);
+      worldRef.current = normalized;
       setCheckpoints(await repositoryRef.current!.listCheckpoints(saveId));
       setLastSummary(null);
       setLastExplanation(null);
-      setMessage(`Opened ${selected.metadata.displayName}.`);
+      setMessage(`Opened ${normalized.metadata.displayName}.`);
     });
   }, [runBusy]);
 
   const rollbackSave = useCallback(async (checkpointId: number) => {
     if (!repositoryRef.current || !world) return;
     await runBusy(async () => {
-      const restored = await repositoryRef.current!.rollbackToCheckpoint(world.metadata.saveId, checkpointId);
+      const restored = normalizeSupplementalState(await repositoryRef.current!.rollbackToCheckpoint(world.metadata.saveId, checkpointId));
       setWorld(restored);
       worldRef.current = restored;
       setSaves(await repositoryRef.current!.listSaves());
