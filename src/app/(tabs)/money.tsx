@@ -29,7 +29,7 @@ export default function MoneyScreen() {
   if (age < 14) {
     return (
       <AppScreen>
-        <View style={styles.header}><Eyebrow>MONEY, MOSTLY SOMEONE ELSE'S PROBLEM</Eyebrow><Heading size="large">Money</Heading><Body secondary>You do not have much financial control yet, but the household you grow up in still shapes stress, opportunity, school choices, and what “normal” feels like.</Body></View>
+        <View style={styles.header}><Eyebrow>MONEY IS MOSTLY A PARENT PROBLEM</Eyebrow><Heading size="large">Money</Heading><Body secondary>You do not have much financial control yet, but the household you grow up in still shapes stress, opportunity, school choices, and what “normal” feels like.</Body></View>
         <Card accent><View style={styles.stats}><Stat label="Your cash" value={formatMoney(actor.cashCents, true)} /><Stat label="Family situation" value={familyTone} tone={familyTone === 'Strained' ? 'danger' : familyTone === 'Comfortable' ? 'success' : 'default'} /><Stat label="Parents around" value={parents.length.toString()} /></View></Card>
         <Card><Heading size="small">🏡 The household matters</Heading><Body secondary>Parents earn, spend, and feel economic pressure in the background now. A strong household can create options later; a strained one can create stress long before you ever see a mortgage application.</Body></Card>
         <Card><Heading size="small">🪙 Your own money will start small</Heading><Body secondary>Teen work, gifts, and later career income become yours. Investing, property, debt, and expensive advisors stay out of the way until they make sense.</Body></Card>
@@ -61,7 +61,7 @@ export default function MoneyScreen() {
         {liabilities.length === 0 ? <Card><Body secondary>No personal liabilities recorded. Mortgages and company debt still live with their assets.</Body></Card> : liabilities.map((liability) => <Card key={liability.id}><View style={styles.row}><Heading size="small">{liability.kind}</Heading><StatusPill tone="danger">{formatMoney(liability.principalCents, true)}</StatusPill></View><Body secondary>{(liability.annualRateBps / 100).toFixed(2)}% annual rate · {formatMoney(liability.weeklyPaymentCents)} weekly payment</Body></Card>)}
       </View> : null}
 
-      {age >= 18 ? <OtherActionComposer domains={['property', 'markets', 'business', 'legal', 'organization']} placeholder="Something money-related we didn't put in a menu…" /> : null}
+      {age >= 18 ? <OtherActionComposer domains={['property', 'markets', 'business', 'legal', 'organization']} placeholder="Something money-related we did not put in a menu…" /> : null}
     </AppScreen>
   );
 }
