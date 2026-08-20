@@ -63,7 +63,7 @@ export default function DynastyScreen() {
 
       <View style={styles.section}>
         <SectionHeader title="Possible successors" action={<StatusPill>{familyRelationships.length}</StatusPill>} />
-        {familyRelationships.length === 0 ? <Card><Body secondary>There is no living spouse, child, sibling, or close relative in the active character's relationship graph yet. Succession remains open until family exists.</Body></Card> : familyRelationships.map(({ relationship, person }) => {
+        {familyRelationships.length === 0 ? <Card><Body secondary>There is no living spouse, child, sibling, or close relative around the active character yet. Succession remains open until family exists.</Body></Card> : familyRelationships.map(({ relationship, person }) => {
           const leadership = competency(world, person.id, 'leadership');
           const management = competency(world, person.id, 'management');
           const finance = competency(world, person.id, 'finance');
