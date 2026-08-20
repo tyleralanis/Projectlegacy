@@ -11,10 +11,13 @@ const AMBIENT_VARIANCE_MS = 60_000;
 const BURST_DURATION_MS = 13_000;
 
 export function ThemeBackdrop() {
-  const { theme, colors } = useAppTheme();
+  const { theme, colors, dark } = useAppTheme();
+  const backgroundGradient: readonly [string, string, string] = theme.id === 'classic' && dark
+    ? [colors.canvas, colors.surface, colors.secondary]
+    : theme.backgroundGradient;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <LinearGradient colors={[...theme.backgroundGradient]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[...backgroundGradient]} style={StyleSheet.absoluteFill} />
       {theme.motif === 'sakura' ? <>
         <Text style={[styles.sakuraLarge, { color: colors.accent }]}>✿</Text>
         <Text style={[styles.sakuraSmall, { color: colors.accent }]}>✿</Text>
