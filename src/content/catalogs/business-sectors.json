@@ -1,6 +1,12 @@
 [
+  { "id": "sector-home-services", "name": "Home Services", "startupCostCents": 1200000, "baseCapacity": 18, "laborIntensity": 0.62 },
   { "id": "sector-services", "name": "Professional Services", "startupCostCents": 2500000, "baseCapacity": 24, "laborIntensity": 0.42 },
-  { "id": "sector-real-estate", "name": "Real Estate", "startupCostCents": 8000000, "baseCapacity": 16, "laborIntensity": 0.22 },
+  { "id": "sector-retail", "name": "Retail & E-commerce", "startupCostCents": 4500000, "baseCapacity": 32, "laborIntensity": 0.38 },
+  { "id": "sector-food", "name": "Food & Hospitality", "startupCostCents": 7500000, "baseCapacity": 30, "laborIntensity": 0.68 },
+  { "id": "sector-technology", "name": "Technology", "startupCostCents": 6000000, "baseCapacity": 38, "laborIntensity": 0.28 },
+  { "id": "sector-manufacturing", "name": "Manufacturing", "startupCostCents": 22000000, "baseCapacity": 70, "laborIntensity": 0.52 },
   { "id": "sector-logistics", "name": "Logistics", "startupCostCents": 12000000, "baseCapacity": 55, "laborIntensity": 0.58 },
-  { "id": "sector-technology", "name": "Technology", "startupCostCents": 6000000, "baseCapacity": 38, "laborIntensity": 0.28 }
+  { "id": "sector-real-estate", "name": "Real Estate", "startupCostCents": 8000000, "baseCapacity": 16, "laborIntensity": 0.22 },
+  { "id": "sector-media", "name": "Media & Creator", "startupCostCents": 1800000, "baseCapacity": 20, "laborIntensity": 0.32 },
+  { "id": "sector-investment", "name": "Holding & Investment", "startupCostCents": 25000000, "baseCapacity": 12, "laborIntensity": 0.14 }
 ]
