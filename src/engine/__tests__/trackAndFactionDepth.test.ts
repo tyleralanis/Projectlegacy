@@ -43,6 +43,7 @@ describe('deep playable life tracks', () => {
   it('turns a job into an active progression loop with performance and stress tradeoffs', () => {
     const world = createWorld({ seed: 'deep-career', startAgeYears: 24, nowISO: '2026-01-01T00:00:00.000Z' });
     const actor = world.characters[world.playerCharacterId];
+    for (const career of Object.values(world.careers)) if (career.characterId === actor.id) career.active = false;
     const careerId = 'career-test';
     world.careers[careerId] = {
       id: careerId,
