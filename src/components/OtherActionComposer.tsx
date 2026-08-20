@@ -2,12 +2,17 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { actionDefinition } from '@/content/actionCatalog';
+import { lifeSystemActionDefinition } from '@/content/lifeSystemsActionCatalog';
 import { classifyIntentConfidence } from '@/engine/intentConfidence';
 import type { Domain, IntentAction } from '@/engine/types';
-import { interpretPlayerIntent } from '@/services/intentService';
+import { interpretPlayerIntent } from '@/services/lifeIntentBridge';
 import { useGame } from '@/state/GameProvider';
 import { Body, Card, Eyebrow, PrimaryButton } from '@/ui/components';
 import { radius, spacing, useAppTheme } from '@/ui/theme';
+
+function actionLabel(verb: string): string {
+  return actionDefinition(verb)?.label ?? lifeSystemActionDefinition(verb)?.label ?? verb;
+}
 
 export function OtherActionComposer({ domains, placeholder = 'Describe another action…' }: { domains: Domain[]; placeholder?: string }) {
   const { world, performAction, logIntent } = useGame();
@@ -48,7 +53,7 @@ export function OtherActionComposer({ domains, placeholder = 'Describe another a
         if (confidencePolicy === 'act') await execute(action, response.requiresConfirmation, response.confidence, diagnostics, response.modeUsed);
         else if (confidencePolicy === 'confirm-meaning') {
           setPending({ action, requiresConfirmation: response.requiresConfirmation, confidence: response.confidence, diagnostics, auditMode: response.modeUsed });
-          setFeedback(`I think you mean “${actionDefinition(action.verb)?.label ?? action.verb}.”`);
+          setFeedback(`I think you mean “${actionLabel(action.verb)}.”`);
           await logIntent({ input: text.trim(), mode: response.modeUsed, confidence: response.confidence, status: 'clarified', proposedVerb: action.verb, targetIds: action.targetIds, diagnostics });
         } else {
           setPending(null);
@@ -95,7 +100,7 @@ export function OtherActionComposer({ domains, placeholder = 'Describe another a
         style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]}
       />
       {feedback ? <Body>{feedback}</Body> : null}
-      {pending ? <PrimaryButton title={`Use “${actionDefinition(pending.action.verb)?.label ?? pending.action.verb}”`} onPress={() => { void execute(pending.action, pending.requiresConfirmation, pending.confidence, pending.diagnostics, pending.auditMode); }} /> : null}
+      {pending ? <PrimaryButton title={`Use “${actionLabel(pending.action.verb)}”`} onPress={() => { void execute(pending.action, pending.requiresConfirmation, pending.confidence, pending.diagnostics, pending.auditMode); }} /> : null}
       <View style={styles.actions}>
         <PrimaryButton title="Close" tone="neutral" style={{ flex: 1 }} onPress={() => setExpanded(false)} />
         <PrimaryButton title={busy ? 'Thinking…' : 'Try it'} disabled={busy || !text.trim()} style={{ flex: 1.5 }} onPress={() => { void interpret(); }} />
