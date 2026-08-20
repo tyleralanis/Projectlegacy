@@ -12,7 +12,7 @@ const motifGlyph: Record<ThemePreset['motif'], string> = {
 
 export default function ThemesScreen() {
   const { world, updateSettings } = useGame();
-  const { colors, theme } = useAppTheme();
+  const { theme } = useAppTheme();
   if (!world) return null;
   const selectedId: VisualThemeId = world.settings.visualTheme ?? 'classic';
   const effectsEnabled = world.settings.ambientThemeEffects ?? true;
