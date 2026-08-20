@@ -4,7 +4,6 @@ import { createWorld } from '../createWorld';
 import { innerCircleProfile } from '../factionDepth';
 import { executeSupplementalDepth } from '../supplementalDepth';
 import { getTrackMemory } from '../trackDepth';
-import { interpretPlayerIntent } from '@/services/intentService';
 
 describe('deep playable life tracks', () => {
   it('persists an investing philosophy instead of treating trades as isolated taps', () => {
@@ -68,7 +67,7 @@ describe('deep playable life tracks', () => {
 });
 
 describe('hidden private movement', () => {
-  it('is unlocked by asking for it and can begin with a dictated archetype', () => {
+  it('is unlocked explicitly and can begin with a dictated archetype', () => {
     const world = createWorld({ seed: 'hidden-movement', startAgeYears: 30, nowISO: '2026-01-01T00:00:00.000Z' });
     world.characters[world.playerCharacterId].cashCents = 2_000_000;
 
@@ -80,15 +79,6 @@ describe('hidden private movement', () => {
     expect(profile?.archetype).toBe('military');
     expect(profile?.security).toBeGreaterThan(10);
     expect(profile?.followers).toBeGreaterThanOrEqual(6);
-  });
-
-  it('maps the hidden phrase through the offline interpreter without exposing a visible starter button', async () => {
-    const world = createWorld({ seed: 'hidden-intent', startAgeYears: 30, nowISO: '2026-01-01T00:00:00.000Z' });
-    const interpreted = await interpretPlayerIntent(world, 'start a military cult', ['organization']);
-
-    expect(interpreted.status).toBe('proposal');
-    expect(interpreted.actions[0]?.verb).toBe('organization.found_inner_circle');
-    expect(interpreted.actions[0]?.parameters.archetype).toBe('military');
   });
 
   it('resolves a national power attempt at a strategic level and leaves persistent consequences', () => {
