@@ -7,6 +7,7 @@ import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { monthlyPropertyListings } from '@/content/lifeCatalogs';
 import { WORLD_CONTENT } from '@/content/worldContent';
 import { formatMoney } from '@/engine/money';
+import { portfolioManagementFeeWeeklyCents, propertyManagerActive } from '@/engine/supplementalDepthBridge';
 import { useGame } from '@/state/GameProvider';
 import { AppScreen, Body, Card, Heading, ProgressBar, SectionHeader, Stat, StatusPill } from '@/ui/components';
 import { radius, spacing, useAppTheme } from '@/ui/theme';
@@ -23,10 +24,12 @@ export default function PropertyScreen() {
   const properties = Object.values(world.properties).filter((property) => property.ownerId === actor.id);
   const listings = monthlyPropertyListings(world.calendar.week, actor.cityId);
   const monthNumber = Math.floor(world.calendar.week / 4);
+  const managerActive = propertyManagerActive(world);
+  const managementFee = portfolioManagementFeeWeeklyCents(world);
 
   return (
     <AppScreen>
-      <SubviewHeader eyebrow="Money" title="Property" subtitle="Real estate now has people and projects behind the spreadsheet. Screen tenants, maintain relationships, repair assets, develop land, manage debt, and decide how much of the work you still want personally." />
+      <SubviewHeader eyebrow="Money" title="Property" subtitle="Real estate now has people and projects behind the spreadsheet. One portfolio manager can handle routine operations across every property while the cost scales with the rent roll." />
       <View style={styles.segmentRow}>
         {(['browse', 'owned'] as ViewMode[]).map((item) => (
           <Pressable key={item} onPress={() => setMode(item)} style={[styles.segment, { backgroundColor: mode === item ? colors.accent : colors.secondary, borderColor: mode === item ? colors.accent : colors.border }]}><Text style={[styles.segmentText, { color: mode === item ? '#FFFFFF' : colors.text }]}>{item === 'browse' ? 'Browse market' : `Owned (${properties.length})`}</Text></Pressable>
@@ -48,6 +51,18 @@ export default function PropertyScreen() {
           })}
         </View>
       </> : <View style={styles.section}>
+        {properties.length > 0 ? <Card accent>
+          <View style={styles.row}>
+            <View style={{ flex: 1, gap: 3 }}><Heading size="small">Portfolio management</Heading><Body secondary>{managerActive ? `One manager covers all ${properties.length} properties and routine maintenance. New acquisitions join the portfolio automatically.` : 'Hire one manager for the entire portfolio instead of paying for and managing a separate relationship on every property.'}</Body></View>
+            <StatusPill tone={managerActive ? 'success' : 'neutral'}>{managerActive ? 'Managed' : 'Self-managed'}</StatusPill>
+          </View>
+          <View style={styles.stats}><Stat label="Properties covered" value={managerActive ? properties.length.toString() : '0'} /><Stat label="Current fee / wk" value={formatMoney(managerActive ? managementFee : 0, true)} /><Stat label="Fee model" value="9% rent" /></View>
+          <Body secondary>The fee scales with rent collected, so a larger portfolio naturally costs more. Management handles routine property-condition decisions; major financing, development, purchases, and sales remain yours.</Body>
+          {managerActive
+            ? <EngineActionButton title="End portfolio management" action={{ verb: 'property.end_management', targetIds: [], parameters: {} }} tone="danger" />
+            : <EngineActionButton title="Hire one portfolio manager" action={{ verb: 'property.manage_portfolio', targetIds: [], parameters: {} }} tone="accent" />}
+        </Card> : null}
+
         {properties.length === 0 ? <Card><Heading size="small">No property yet</Heading><Body secondary>Switch to Browse market to see what is available this month.</Body></Card> : properties.map((property) => {
           const equity = property.valueCents - property.debtCents;
           const tenantMemory = Object.values(world.memories).find((memory) => memory.category === `Property · Tenant · ${property.id}` && memory.unresolved);
@@ -59,7 +74,7 @@ export default function PropertyScreen() {
           const commercialCost = Math.max(10_000_000, Math.round(property.valueCents * 0.72));
           return (
             <Card key={property.id}>
-              <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading>{property.name}</Heading><Body secondary>{property.kind} · {property.occupancy} · {property.managed ? 'professionally managed' : 'self-managed'}</Body></View><StatusPill tone={equity >= 0 ? 'success' : 'danger'}>{formatMoney(equity, true)} equity</StatusPill></View>
+              <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading>{property.name}</Heading><Body secondary>{property.kind} · {property.occupancy} · {property.managed || managerActive ? 'professionally managed' : 'self-managed'}</Body></View><StatusPill tone={equity >= 0 ? 'success' : 'danger'}>{formatMoney(equity, true)} equity</StatusPill></View>
               <View style={styles.stats}><Stat label="Value" value={formatMoney(property.valueCents, true)} tone="legacy" /><Stat label="Debt" value={formatMoney(property.debtCents, true)} tone="danger" /><Stat label="Rent / wk" value={formatMoney(property.weeklyRentCents, true)} /><Stat label="Condition" value={Math.round(property.condition).toString()} /></View>
               <ProgressBar value={property.condition} tone={property.condition < 45 ? 'danger' : 'success'} />
 
@@ -90,13 +105,13 @@ export default function PropertyScreen() {
                   <EngineActionButton title="Major renovation" action={{ verb: 'property.renovate', targetIds: [property.id], parameters: { amountCents: Math.max(3_000_000, Math.round(property.valueCents * 0.05)) } }} style={styles.actionButton} />
                 </View>
 
-                <SectionHeader title="Finance & management" />
-                <View style={styles.actions}>{!property.managed ? <EngineActionButton title="Hire property manager" action={{ verb: 'property.manage', targetIds: [property.id], parameters: {} }} style={styles.actionButton} /> : null}<EngineActionButton title="Refinance" action={{ verb: 'property.refinance', targetIds: [property.id], parameters: {} }} style={styles.actionButton} /><EngineActionButton title="Sell property" action={{ verb: 'property.sell', targetIds: [property.id], parameters: {}, destructive: true }} tone="danger" style={styles.actionButton} /></View>
+                <SectionHeader title="Finance" />
+                <View style={styles.actions}><EngineActionButton title="Refinance" action={{ verb: 'property.refinance', targetIds: [property.id], parameters: {} }} style={styles.actionButton} /><EngineActionButton title="Sell property" action={{ verb: 'property.sell', targetIds: [property.id], parameters: {}, destructive: true }} tone="danger" style={styles.actionButton} /></View>
               </> : null}
             </Card>
           );
         })}
-        <OtherActionComposer domains={['property']} placeholder="Something else with a property or development…" />
+        <OtherActionComposer domains={['property']} placeholder="Something else with a property, portfolio manager, or development…" />
       </View>}
     </AppScreen>
   );
