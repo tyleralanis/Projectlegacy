@@ -64,7 +64,7 @@ export default function LifeScreen() {
       {activeEvent ? (
         <Pressable accessibilityRole="button" onPress={() => router.push('/event')}>
           <Card accent style={{ borderColor: colors.legacy }}>
-            <View style={styles.eventHeader}><View style={{ gap: 4, flex: 1 }}><Eyebrow color={colors.legacy}>SOMETHING'S UP · {activeEvent.domain.toUpperCase()}</Eyebrow><Heading>{activeEvent.title}</Heading></View><StatusPill tone={activeEvent.severity === 'S4' ? 'danger' : 'warning'}>{activeEvent.severity}</StatusPill></View>
+            <View style={styles.eventHeader}><View style={{ gap: 4, flex: 1 }}><Eyebrow color={colors.legacy}>SOMETHING IS UP · {activeEvent.domain.toUpperCase()}</Eyebrow><Heading>{activeEvent.title}</Heading></View><StatusPill tone={activeEvent.severity === 'S4' ? 'danger' : 'warning'}>{activeEvent.severity}</StatusPill></View>
             <Body>{activeEvent.narrative}</Body><PrimaryButton title="See what's happening" onPress={() => router.push('/event')} />
           </Card>
         </Pressable>
