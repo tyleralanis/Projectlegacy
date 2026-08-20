@@ -11,9 +11,13 @@ const ALIASES: Record<string, string[]> = {
   'health.checkup': ['get a checkup', 'doctor checkup', 'routine checkup', 'physical exam', 'preventive care'],
   'health.rehab': ['do rehab', 'rehab my injury', 'physical therapy', 'recover with rehab', 'treat my injury'],
   'health.rest_week': ['take a recovery week', 'rest for a week', 'take it easy this week', 'take a week off', 'recovery week'],
+  'health.cancel_gym_membership': ['cancel my gym membership', 'cancel gym membership', 'cancel the gym', 'stop gym membership', 'stop gym renewal'],
   'property.screen_tenant': ['screen a tenant', 'find a tenant', 'screen tenants', 'rent to someone', 'tenant application'],
   'property.repair': ['repair the property', 'fix the property', 'make repairs', 'fix my rental', 'repair my rental'],
   'property.develop': ['develop the land', 'develop my land', 'build apartments', 'build multifamily', 'build commercial', 'develop into apartments', 'develop into commercial'],
+  'property.manage_portfolio': ['hire a property manager', 'hire property manager', 'manage all my properties', 'manage my portfolio', 'portfolio manager'],
+  'property.end_management': ['fire property manager', 'end property management', 'self manage my properties', 'self-manage my properties', 'cancel property management'],
+  'business.withdraw_funds': ['withdraw business cash', 'withdraw company cash', 'take money out of the company', 'pay myself from the business', 'pay myself from the company', 'owner distribution', 'take a distribution'],
   'sports.sign_endorsement': ['sign an endorsement', 'get an endorsement', 'brand deal', 'sponsorship deal', 'sign a sponsorship'],
   'sports.recover': ['recover from injury', 'recover from my injury', 'rest my injury', 'sports recovery'],
   'sports.retire': ['retire from sports', 'retire from professional sports', 'retire from playing', 'end my playing career'],
@@ -46,6 +50,17 @@ function propertyTarget(world: WorldState, text: string, verb: string): { id?: s
   return { clarification: `Which property do you mean: ${properties.slice(0, 5).map((property) => property.name).join(', ')}?` };
 }
 
+function businessTarget(world: WorldState, text: string): { id?: string; clarification?: string } {
+  const actor = world.characters[world.playerCharacterId];
+  const businesses = Object.values(world.businesses).filter((business) => business.active && (business.ownerId ?? business.founderId) === actor.id && business.playerOwnershipBps > 0);
+  if (businesses.length === 0) return { clarification: 'You do not currently own an active company to take a distribution from.' };
+  const normalized = normalizedText(text);
+  const named = businesses.filter((business) => normalized.includes(business.name.toLowerCase()));
+  if (named.length === 1) return { id: named[0].id };
+  if (businesses.length === 1) return { id: businesses[0].id };
+  return { clarification: `Which company do you mean: ${businesses.slice(0, 5).map((business) => business.name).join(', ')}?` };
+}
+
 function hourTarget(text: string): number {
   const normalized = normalizedText(text);
   const exact = normalized.match(/\b(20|32|40|50)\s*(?:hours?|hrs?)\b/);
@@ -76,33 +91,43 @@ function matchedLifeAction(text: string, domains: Domain[]) {
     .sort((left, right) => right.score - left.score)[0];
 }
 
+function clarification(requestId: string, verb: string, detail: string): IntentResponse {
+  return {
+    requestId,
+    status: 'clarification',
+    modeUsed: 'baseline',
+    confidence: 0.78,
+    requiresConfirmation: false,
+    clarification: detail,
+    actions: [],
+    safetyFlags: [],
+    diagnostics: { parser: 'systemic_life_alias', proposedVerb: verb },
+  };
+}
+
 export async function interpretPlayerIntent(world: WorldState, text: string, domains: Domain[]): Promise<IntentResponse> {
   const match = matchedLifeAction(text, domains);
   if (!match) return interpretBaseIntent(world, text, domains);
 
   const verb = match.definition.id;
+  const requestId = `life-intent-${Date.now()}`;
   const parameters: Record<string, string | number | boolean | null> = {};
   const parsedAmount = amountCents(text);
   if (parsedAmount !== undefined) parameters.amountCents = parsedAmount;
   let targetIds: string[] = [];
 
-  if (verb.startsWith('property.')) {
+  const portfolioVerb = verb === 'property.manage_portfolio' || verb === 'property.end_management';
+  if (verb.startsWith('property.') && !portfolioVerb) {
     const target = propertyTarget(world, text, verb);
-    if (!target.id) {
-      return {
-        requestId: `life-intent-${Date.now()}`,
-        status: 'clarification',
-        modeUsed: 'baseline',
-        confidence: 0.78,
-        requiresConfirmation: false,
-        clarification: target.clarification ?? 'Which property do you mean?',
-        actions: [],
-        safetyFlags: [],
-        diagnostics: { parser: 'systemic_life_alias', proposedVerb: verb },
-      };
-    }
+    if (!target.id) return clarification(requestId, verb, target.clarification ?? 'Which property do you mean?');
     targetIds = [target.id];
     if (verb === 'property.develop') parameters.targetKind = /commercial|retail|office/.test(normalizedText(text)) ? 'commercial' : 'multifamily';
+  }
+
+  if (verb === 'business.withdraw_funds') {
+    const target = businessTarget(world, text);
+    if (!target.id) return clarification(requestId, verb, target.clarification ?? 'Which company do you mean?');
+    targetIds = [target.id];
   }
 
   if (verb === 'career.negotiate_hours') parameters.hours = hourTarget(text);
@@ -110,7 +135,7 @@ export async function interpretPlayerIntent(world: WorldState, text: string, dom
 
   const requiresConfirmation = verb === 'sports.retire';
   return {
-    requestId: `life-intent-${Date.now()}`,
+    requestId,
     status: 'proposal',
     modeUsed: 'baseline',
     confidence: 0.96,
