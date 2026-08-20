@@ -1,29 +1,52 @@
 import type { ActionDefinition } from './actionCatalog';
 
 export const DEPTH_ACTION_CATALOG: ActionDefinition[] = [
+  { id: 'skills.practice', domain: 'life', label: 'Practice a competency', summary: 'Deliberately improve one underlying skill at a real time and stress cost.' },
+
   { id: 'markets.research', domain: 'markets', label: 'Research investment', summary: 'Build a current thesis around a listed company instead of buying blind.' },
   { id: 'markets.set_strategy', domain: 'markets', label: 'Set investing strategy', summary: 'Choose a persistent investment philosophy such as index, value, growth, income, concentrated, or speculative.' },
   { id: 'markets.rebalance', domain: 'markets', label: 'Rebalance portfolio', summary: 'Reduce concentration by reweighting existing positions.' },
+  { id: 'markets.private_deal', domain: 'markets', label: 'Enter private deal', summary: 'Use relationship-driven deal access and capital to enter an illiquid private investment.' },
 
   { id: 'business.set_growth_posture', domain: 'business', label: 'Set growth posture', summary: 'Choose conservative, balanced, or aggressive company growth.' },
   { id: 'business.invest_quality', domain: 'business', label: 'Invest in quality', summary: 'Spend company cash on execution quality and customer reputation.' },
   { id: 'business.invest_rd', domain: 'business', label: 'Invest in R&D', summary: 'Spend company cash on capability, product, or process development.' },
   { id: 'business.reward_staff', domain: 'business', label: 'Reward staff', summary: 'Put company money behind employee rewards and culture.' },
   { id: 'business.expand_location', domain: 'business', label: 'Open another location', summary: 'Add physical operating capacity, headcount, cost, and management complexity.' },
+  { id: 'business.add_product', domain: 'business', label: 'Launch product or service', summary: 'Create a separate offering with its own quality, demand, reputation, cost, maturity, and lifecycle.' },
+  { id: 'business.improve_product', domain: 'business', label: 'Improve product', summary: 'Invest in one specific offering rather than treating the whole company as a single stat.' },
+  { id: 'business.retire_product', domain: 'business', label: 'Retire product', summary: 'Stop carrying an offering that no longer deserves capital and management attention.' },
+  { id: 'business.acquire_company', domain: 'business', label: 'Acquire company', summary: 'Buy another operating business and inherit its people, customers, products, and complexity.' },
 
   { id: 'education.choose_major', domain: 'education', label: 'Choose a major', summary: 'Give an active college degree a specialization that can shape later career stories.' },
+  { id: 'education.add_minor', domain: 'education', label: 'Add a minor', summary: 'Add a second academic specialization at the cost of more workload.' },
   { id: 'education.office_hours', domain: 'education', label: 'Go to office hours', summary: 'Trade time for grades, knowledge, and faculty familiarity.' },
+  { id: 'education.research_project', domain: 'education', label: 'Do a serious project', summary: 'Turn school into work that can affect skill, grades, faculty visibility, and reputation.' },
+  { id: 'education.find_mentor', domain: 'education', label: 'Find academic mentor', summary: 'Create a persistent professor or mentor relationship that can outlive school.' },
   { id: 'education.join_club', domain: 'education', label: 'Join a club', summary: 'Create a persistent campus organization and network.' },
   { id: 'education.internship', domain: 'education', label: 'Take an internship', summary: 'Turn college into real work experience and professional reputation.' },
   { id: 'education.sports_train', domain: 'education', label: 'Train seriously', summary: 'Invest in athletic development at a small academic and stress cost.' },
   { id: 'education.sports_compete', domain: 'education', label: 'Compete', summary: 'Create an athletic result that can affect reputation and opportunity.' },
   { id: 'education.sports_seek_scholarship', domain: 'education', label: 'Seek athletic scholarship', summary: 'Use a strong athletic profile to pursue education support.' },
+  { id: 'sports.choose_sport', domain: 'education', label: 'Choose competitive sport', summary: 'Commit to one sport so training, competition, recruiting, health, and school can become one storyline.' },
+  { id: 'sports.practice', domain: 'education', label: 'Practice sport', summary: 'Develop actual athletic skill and fitness at a time and stress cost.' },
+  { id: 'sports.compete', domain: 'education', label: 'Compete seriously', summary: 'Put athletic skill on the line and build a persistent competitive record.' },
+  { id: 'sports.seek_agent', domain: 'career', label: 'Seek professional representation', summary: 'Turn an elite athletic profile into a possible professional sports career.' },
 
   { id: 'career.work_hard', domain: 'career', label: 'Push at work', summary: 'Trade stress for performance and employee reputation.' },
   { id: 'career.network', domain: 'career', label: 'Build career network', summary: 'Invest in professional reputation and relationships around the job.' },
   { id: 'career.train', domain: 'career', label: 'Build job skills', summary: 'Improve competence rather than only tenure.' },
   { id: 'career.seek_promotion', domain: 'career', label: 'Push for promotion', summary: 'Make a promotion case based on tenure, performance, reputation, and people skills.' },
   { id: 'career.office_politics', domain: 'career', label: 'Navigate office politics', summary: 'Try to build internal support, with relationship risk if you misread the room.' },
+  { id: 'career.find_mentor', domain: 'career', label: 'Find a mentor', summary: 'Build a persistent sponsor relationship inside the organization.' },
+  { id: 'career.take_lead', domain: 'career', label: 'Take the lead', summary: 'Accept visible responsibility and let competence decide whether the move helps or hurts.' },
+  { id: 'career.build_alliance', domain: 'career', label: 'Build internal alliance', summary: 'Strengthen a coworker relationship and organization standing, with social risk if it feels transactional.' },
+
+  { id: 'dynasty.family_council', domain: 'dynasty', label: 'Hold family council', summary: 'Put succession, money, care, ownership, and expectations into the same room before a crisis forces it.' },
+  { id: 'dynasty.train_heir', domain: 'dynasty', label: 'Develop heir', summary: 'Build an heir’s leadership, finance, management, and negotiation before inheritance arrives.' },
+
+  { id: 'politics.build_coalition', domain: 'politics', label: 'Build coalition', summary: 'Use political and negotiation skill to turn relationships and institutions into durable support.' },
+  { id: 'politics.recruit_staff', domain: 'politics', label: 'Recruit senior staff', summary: 'Hire a persistent political operator whose loyalty and ambition can matter later.' },
 
   { id: 'organization.found_inner_circle', domain: 'organization', label: 'Start a private movement', summary: 'Unlock a hidden player-led movement with its own followers, resources, doctrine, cohesion, and strategic branches.' },
   { id: 'faction.set_archetype', domain: 'organization', label: 'Choose movement type', summary: 'Define a private movement as religious, military, political, communal, or commercial.' },
