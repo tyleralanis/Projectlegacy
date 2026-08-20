@@ -1,5 +1,6 @@
 import { executeCareerApplication } from './careerApplicationBridge';
 import { applyDelegationAdvance, executeDelegationDepth, prepareDelegationAdvance } from './delegationDepth';
+import { normalizeDelegatedWorld } from './delegationNormalize';
 import { executeSecondarySchoolApplication } from './educationApplicationBridge';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
 import {
@@ -8,12 +9,16 @@ import {
   executeSupplementalDepth as executeBaseSupplementalDepth,
   getTuitionBalance,
   hasGymMembership,
-  normalizeSupplementalState,
+  normalizeSupplementalState as normalizeBaseSupplementalState,
 } from './supplementalDepth';
 import type { ActionResult, IntentAction, WorldState } from './types';
 
-export { ceoCandidates, getTuitionBalance, hasGymMembership, normalizeSupplementalState };
+export { ceoCandidates, getTuitionBalance, hasGymMembership };
 export { businessRunwayReserveCents, distributableBusinessCashCents, portfolioManagementFeeWeeklyCents, propertyManagerActive } from './delegationDepth';
+
+export function normalizeSupplementalState(source: WorldState): WorldState {
+  return normalizeDelegatedWorld(normalizeBaseSupplementalState(source));
+}
 
 /**
  * OTA-safe extension point for life systems that were added after the original
