@@ -21,6 +21,7 @@ export const ACTION_CATALOG: ActionDefinition[] = [
   { id: 'education.apply', domain: 'education', label: 'Apply', summary: 'Apply to a specific education pathway.' },
   { id: 'education.enroll', domain: 'education', label: 'Enroll', summary: 'Accept a place and enroll.' },
   { id: 'education.study', domain: 'education', label: 'Study', summary: 'Spend time improving academic performance.' },
+  { id: 'education.pay_tuition', domain: 'education', label: 'Pay tuition', summary: 'Pay some or all of the current academic-year tuition bill.' },
   { id: 'education.party', domain: 'education', label: 'Go out', summary: 'Trade study time for mood, social connections, and possible consequences.' },
   { id: 'education.sports', domain: 'education', label: 'Play college sports', summary: 'Build fitness, school ties, and reputation through athletics.' },
   { id: 'education.withdraw', domain: 'education', label: 'Drop out', summary: 'Leave an active program.', destructive: true, confirmationMandatory: true },
@@ -36,6 +37,7 @@ export const ACTION_CATALOG: ActionDefinition[] = [
   { id: 'business.set_price', domain: 'business', label: 'Set pricing', summary: 'Choose value, market, or premium positioning.' },
   { id: 'business.hire', domain: 'business', label: 'Hire', summary: 'Add people and operating capacity.' },
   { id: 'business.delegate', domain: 'business', label: 'Hire a CEO', summary: 'Hire professional management so ownership consumes less personal time.' },
+  { id: 'business.hire_ceo', domain: 'business', label: 'Hire selected CEO', summary: 'Choose a specific executive by salary, management ability, leadership, finance, and sector fit.' },
   { id: 'business.raise_capital', domain: 'business', label: 'Raise capital', summary: 'Trade ownership for outside capital.', confirmationMandatory: true },
   { id: 'business.sell', domain: 'business', label: 'Sell business', summary: 'Exit the company at its current valuation.', destructive: true, confirmationMandatory: true },
 
@@ -54,7 +56,8 @@ export const ACTION_CATALOG: ActionDefinition[] = [
   { id: 'markets.hire_wealth_manager', domain: 'markets', label: 'Hire wealth manager', summary: 'Pay ongoing fees for portfolio oversight and better information.' },
 
   { id: 'health.run', domain: 'health', label: 'Go for a run', summary: 'Spend time improving fitness and reducing stress.' },
-  { id: 'health.gym', domain: 'health', label: 'Go to the gym', summary: 'Pay for a visit or membership and improve fitness.' },
+  { id: 'health.gym', domain: 'health', label: 'Go to the gym', summary: 'Pay for a visit or use a membership and improve fitness.' },
+  { id: 'health.join_gym', domain: 'health', label: 'Join gym', summary: 'Buy an annual gym membership so future visits are included.' },
   { id: 'health.group_class', domain: 'health', label: 'Take a group class', summary: 'Pay for wellness, fitness, and a chance to meet someone.' },
   { id: 'health.therapy', domain: 'health', label: 'Go to therapy', summary: 'Pay for help reducing stress and improving mood.' },
   { id: 'health.outdoors', domain: 'health', label: 'Get outside', summary: 'Spend time outdoors for mood and health.' },
