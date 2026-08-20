@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useGame } from '@/state/GameProvider';
@@ -41,14 +41,15 @@ export function ThemeAmbientLayer() {
   const { theme } = useAppTheme();
   const [burst, setBurst] = useState(0);
   const [active, setActive] = useState(false);
+  const [activeSince, setActiveSince] = useState(0);
   const enabled = Boolean(world)
     && (world?.settings.ambientThemeEffects ?? true)
     && !world?.settings.reducedMotion
     && !world?.settings.highContrast
     && theme.ambient.kind !== 'none';
+  const activeIsFresh = active && Date.now() - activeSince < BURST_DURATION_MS + 1_000;
 
   useEffect(() => {
-    setActive(false);
     if (!enabled) return undefined;
     let nextTimer: ReturnType<typeof setTimeout> | undefined;
     let endTimer: ReturnType<typeof setTimeout> | undefined;
@@ -59,6 +60,7 @@ export function ThemeAmbientLayer() {
       nextTimer = setTimeout(() => {
         if (disposed) return;
         setBurst((value) => value + 1);
+        setActiveSince(Date.now());
         setActive(true);
         endTimer = setTimeout(() => {
           if (disposed) return;
@@ -76,7 +78,7 @@ export function ThemeAmbientLayer() {
     };
   }, [enabled, theme.id]);
 
-  if (!enabled || !active) return null;
+  if (!enabled || !activeIsFresh) return null;
   return <AmbientBurst key={`${theme.id}-${burst}`} kind={theme.ambient.kind} sequence={burst} />;
 }
 
@@ -102,9 +104,11 @@ function PetalBurst({ width, height }: { width: number; height: number }) {
 
 function Petal({ left, duration, delay, scale, height }: { left: number; duration: number; delay: number; scale: number; height: number }) {
   const { colors } = useAppTheme();
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
   useEffect(() => {
-    Animated.timing(progress, { toValue: 1, duration, delay, easing: Easing.inOut(Easing.quad), useNativeDriver: nativeDriver }).start();
+    const animation = Animated.timing(progress, { toValue: 1, duration, delay, easing: Easing.inOut(Easing.quad), useNativeDriver: nativeDriver });
+    animation.start();
+    return () => animation.stop();
   }, [delay, duration, progress]);
   return <Animated.View style={[
     styles.petal,
@@ -124,9 +128,11 @@ function Petal({ left, duration, delay, scale, height }: { left: number; duratio
 
 function ShootingStar({ width }: { width: number }) {
   const { colors } = useAppTheme();
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
   useEffect(() => {
-    Animated.timing(progress, { toValue: 1, duration: 4_600, easing: Easing.out(Easing.cubic), useNativeDriver: nativeDriver }).start();
+    const animation = Animated.timing(progress, { toValue: 1, duration: 4_600, easing: Easing.out(Easing.cubic), useNativeDriver: nativeDriver });
+    animation.start();
+    return () => animation.stop();
   }, [progress]);
   return <View pointerEvents="none" style={styles.ambientLayer}><Animated.View style={[
     styles.shootingStar,
@@ -143,10 +149,12 @@ function ShootingStar({ width }: { width: number }) {
 }
 
 function ForestVisitor({ width, sequence }: { width: number; sequence: number }) {
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
   const bird = sequence % 3 === 0;
   useEffect(() => {
-    Animated.timing(progress, { toValue: 1, duration: bird ? 7_000 : 9_000, easing: Easing.inOut(Easing.quad), useNativeDriver: nativeDriver }).start();
+    const animation = Animated.timing(progress, { toValue: 1, duration: bird ? 7_000 : 9_000, easing: Easing.inOut(Easing.quad), useNativeDriver: nativeDriver });
+    animation.start();
+    return () => animation.stop();
   }, [bird, progress]);
   return <View pointerEvents="none" style={styles.ambientLayer}><Animated.Text style={[
     styles.wildlife,
@@ -159,9 +167,11 @@ function ForestVisitor({ width, sequence }: { width: number; sequence: number })
 }
 
 function SoftGlow({ width, height }: { width: number; height: number }) {
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
   useEffect(() => {
-    Animated.timing(progress, { toValue: 1, duration: 6_500, easing: Easing.inOut(Easing.quad), useNativeDriver: nativeDriver }).start();
+    const animation = Animated.timing(progress, { toValue: 1, duration: 6_500, easing: Easing.inOut(Easing.quad), useNativeDriver: nativeDriver });
+    animation.start();
+    return () => animation.stop();
   }, [progress]);
   return <View pointerEvents="none" style={styles.ambientLayer}><Animated.View style={[
     styles.softGlow,
