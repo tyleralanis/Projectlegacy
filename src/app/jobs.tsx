@@ -5,6 +5,7 @@ import { EngineActionButton } from '@/components/EngineActionButton';
 import { SubviewHeader } from '@/components/MenuTile';
 import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { WORLD_CONTENT } from '@/content/worldContent';
+import { employerNameForProfession, professionSkillSnapshot } from '@/engine/careerApplicationBridge';
 import { careerCompetencies, competency, competencyLabel, effectiveCareerCompetence } from '@/engine/competencies';
 import { playerAgeYears } from '@/engine/createWorld';
 import { formatMoney } from '@/engine/money';
@@ -29,10 +30,6 @@ function completedHigherEducation(world: NonNullable<ReturnType<typeof useGame>[
   return Object.values(world.education).some((record) => record.characterId === actorId && record.status === 'completed' && record.level !== 'Secondary diploma');
 }
 
-function mockCareer(actorId: string, title: string, sector: string) {
-  return { id: 'preview', characterId: actorId, employerId: 'preview', title, sector, weeklySalaryCents: 0, performance: 55, satisfaction: 60, weeksInRole: 0, active: true };
-}
-
 export default function JobsScreen() {
   const { world } = useGame();
   if (!world) return null;
@@ -45,6 +42,7 @@ export default function JobsScreen() {
   const listings = listingsForWeek(world.calendar.week);
   const leverage = getTrackMemory(world, 'Career · Growing leverage');
   const networkStory = getTrackMemory(world, 'Track · Career network');
+  const currentEmployer = current ? world.organizations[current.employerId] : undefined;
   const coworkers = current ? Object.values(world.relationships)
     .filter((relationship) => relationship.kind === 'professional' && relationship.characterIds.includes(actor.id))
     .map((relationship) => ({ relationship, person: world.characters[relationship.characterIds.find((id) => id !== actor.id)!] }))
@@ -68,7 +66,7 @@ export default function JobsScreen() {
       {current ? <View style={styles.section}>
         <SectionHeader title="Current role" action={<StatusPill tone={current.satisfaction >= 65 ? 'success' : current.satisfaction < 40 ? 'warning' : 'accent'}>{Math.floor(current.weeksInRole / 52)}y {current.weeksInRole % 52}w</StatusPill>} />
         <Card>
-          <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading>{current.title}</Heading><Body secondary>{current.department ?? current.sector} · {formatMoney(current.weeklySalaryCents * 52, true)}/yr · {current.hoursPerWeek ?? 40}h/wk</Body></View><StatusPill tone={competence >= 72 ? 'success' : competence < 48 ? 'warning' : 'accent'}>Competence {Math.round(competence)}</StatusPill></View>
+          <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading>{current.title}</Heading><Body secondary>{currentEmployer?.name ?? current.department ?? current.sector} · {formatMoney(current.weeklySalaryCents * 52, true)}/yr · {current.hoursPerWeek ?? 40}h/wk</Body></View><StatusPill tone={competence >= 72 ? 'success' : competence < 48 ? 'warning' : 'accent'}>Competence {Math.round(competence)}</StatusPill></View>
           <View style={styles.metric}><View style={styles.row}><Body>Performance</Body><Body secondary>{Math.round(current.performance)}/100</Body></View><ProgressBar value={current.performance} tone={current.performance >= 70 ? 'success' : 'accent'} /></View>
           <View style={styles.metric}><View style={styles.row}><Body>Internal standing</Body><Body secondary>{Math.round(current.organizationStanding ?? 48)}/100</Body></View><ProgressBar value={current.organizationStanding ?? 48} tone="legacy" /></View>
           <View style={styles.metric}><View style={styles.row}><Body>Promotion case</Body><Body secondary>{Math.round(current.promotionProgress ?? 0)}/100</Body></View><ProgressBar value={current.promotionProgress ?? 0} tone={(current.promotionProgress ?? 0) >= 70 ? 'success' : 'accent'} /></View>
@@ -120,23 +118,27 @@ export default function JobsScreen() {
       <View style={styles.section}>
         <SectionHeader title="This week's openings" action={<StatusPill>{listings.length}</StatusPill>} />
         {listings.map((job) => {
+          const skill = professionSkillSnapshot(world, actor.id, job);
           const eligibleAge = age >= job.minimumAge;
           const eligibleDegree = !job.requiredDegree || degree;
           const eligibleKnowledge = actor.knowledge >= job.minKnowledge;
           const eligibleExperience = experienceWeeks >= job.minExperienceWeeks;
           const eligibleReputation = actor.reputation.professional >= job.minReputation;
-          const eligible = eligibleAge && eligibleDegree && eligibleKnowledge && eligibleExperience && eligibleReputation;
-          const skillFit = effectiveCareerCompetence(world, mockCareer(actor.id, job.title, job.sector));
+          const eligibleSkill = skill.value >= skill.minimum;
+          const eligible = eligibleAge && eligibleDegree && eligibleKnowledge && eligibleExperience && eligibleReputation && eligibleSkill;
+          const employerName = employerNameForProfession(world, job);
           return (
             <Card key={job.id}>
-              <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{job.title}</Heading><Body secondary>{job.sector} · {formatMoney(job.weeklySalaryCents * 52, true)}/yr</Body></View><StatusPill tone={eligible && skillFit >= 52 ? 'success' : 'warning'}>{eligible ? `Fit ${Math.round(skillFit)}` : 'Prereqs'}</StatusPill></View>
-              <Body secondary>Age {job.minimumAge}+ · Knowledge {job.minKnowledge}+ · Reputation {job.minReputation}+ · {job.requiredDegree ? 'Degree required' : 'Degree optional'} · {job.minExperienceWeeks ? `${Math.ceil(job.minExperienceWeeks / 52)}y experience` : 'Entry level'}</Body>
-              <Body secondary>Prerequisites can get the application read. Skill fit affects what happens after somebody actually gives you the job.</Body>
-              <EngineActionButton title={eligible ? `Apply for ${job.title}` : 'Apply anyway'} action={{ verb: 'career.apply', targetIds: [], parameters: { professionId: job.id } }} tone={eligible ? 'accent' : 'neutral'} />
+              <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{job.title}</Heading><Body secondary>{employerName} · {job.sector} · about {formatMoney(job.weeklySalaryCents * 52, true)}/yr</Body></View><StatusPill tone={eligible ? 'success' : 'warning'}>{eligible ? 'Competitive' : 'Prereqs'}</StatusPill></View>
+              <Body secondary>Age {job.minimumAge}+ · Knowledge {job.minKnowledge}+ · Reputation {job.minReputation}+ · {skill.label} {skill.minimum}+ · {job.requiredDegree ? 'Degree required' : 'Degree optional'} · {job.minExperienceWeeks ? `${Math.ceil(job.minExperienceWeeks / 52)}y experience` : 'Entry level'}</Body>
+              <View style={styles.skillRequirement}><Body>{skill.label}</Body><Body secondary>{Math.round(skill.value)} / {skill.minimum}</Body></View>
+              <ProgressBar value={Math.min(100, (skill.value / Math.max(1, skill.minimum)) * 75)} tone={eligibleSkill ? 'success' : 'legacy'} />
+              <Body secondary>The competency bar is authoritative. A degree can open the door; it does not substitute for the underlying skill.</Body>
+              <EngineActionButton title={eligible ? `Apply to ${employerName}` : 'Apply anyway'} action={{ verb: 'career.apply', targetIds: [], parameters: { professionId: job.id } }} tone={eligible ? 'accent' : 'neutral'} />
             </Card>
           );
         })}
-        <Body secondary>Listings refresh automatically when the world advances into a new week.</Body>
+        <Body secondary>Listings and employers refresh as the world moves. The same career can exist at different organizations instead of routing every life through one company.</Body>
       </View>
 
       <OtherActionComposer domains={['career']} placeholder="Another career move, schedule change, or sports transition…" />
@@ -152,4 +154,5 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   actionButton: { flexGrow: 1, flexBasis: 130 },
   skillWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  skillRequirement: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
 });
