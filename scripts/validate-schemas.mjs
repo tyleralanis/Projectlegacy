@@ -34,14 +34,17 @@ if (!Array.isArray(actions) || actions.length < 80) throw new Error('LegacyAI ac
 const actionIds = actions.map((action) => action.id);
 if (new Set(actionIds).size !== actionIds.length) throw new Error('LegacyAI action registry contains duplicate IDs.');
 
-const catalogSource = fs.readFileSync(path.join(root, 'src', 'content', 'actionCatalog.ts'), 'utf8');
-const gameActionIds = [...catalogSource.matchAll(/\{ id: '([^']+)'/g)].map((match) => match[1]);
+const catalogSources = [
+  path.join(root, 'src', 'content', 'actionCatalog.ts'),
+  path.join(root, 'src', 'content', 'depthActionCatalog.ts'),
+].filter(fs.existsSync).map((file) => fs.readFileSync(file, 'utf8')).join('\n');
+const gameActionIds = [...catalogSources.matchAll(/\{ id: '([^']+)'/g)].map((match) => match[1]);
+if (new Set(gameActionIds).size !== gameActionIds.length) throw new Error('Game action catalogs contain duplicate IDs.');
 const nativeActionIds = new Set(actionIds);
 
-// These actions were added as JS/TS-only gameplay in OTA-compatible releases. They are
-// intentionally not added to the compiled Swift registry because doing so would require a
-// new App Store/TestFlight binary. Menus and the deterministic TypeScript interpreter can
-// still use them fully offline. A future native-AI binary may promote them into the registry.
+// These actions are implemented entirely in the TypeScript simulation layer so compatible
+// Expo updates can add gameplay without changing the compiled Swift intent registry. They
+// remain local/offline and authoritative because the engine validates and executes them.
 const otaOnlyActions = new Set([
   'education.pay_tuition', 'education.party', 'education.sports',
   'business.hire_ceo', 'property.evict', 'markets.hire_wealth_manager',
@@ -49,13 +52,19 @@ const otaOnlyActions = new Set([
   'life.move_city', 'life.emigrate', 'organization.create',
   'politics.press_conference', 'politics.town_hall', 'politics.fundraiser', 'politics.constituent_work',
   'legal.hire_private_counsel',
-  'relationship.prioritize', 'relationship.deep_talk', 'relationship.check_in', 'relationship.apologize',
-  'relationship.forgive', 'relationship.celebrate', 'relationship.date_night', 'relationship.weekend_away',
-  'relationship.support_goal', 'relationship.ask_favor', 'relationship.lend_money', 'relationship.collect_loan',
-  'relationship.set_boundary', 'relationship.one_on_one', 'relationship.reminisce', 'relationship.plan_future',
-  'relationship.introduce_network',
-  'family.family_dinner', 'family.help_school', 'family.teach_money', 'family.attend_event', 'family.caregiving',
-  'family.set_expectations', 'family.invite_business', 'family.discuss_inheritance',
+  'relationship.prioritize', 'relationship.deep_talk', 'relationship.check_in', 'relationship.apologize', 'relationship.forgive',
+  'relationship.celebrate', 'relationship.date_night', 'relationship.weekend_away', 'relationship.support_goal', 'relationship.ask_favor',
+  'relationship.lend_money', 'relationship.collect_loan', 'relationship.set_boundary', 'relationship.one_on_one', 'relationship.reminisce',
+  'relationship.plan_future', 'relationship.introduce_network',
+  'family.family_dinner', 'family.help_school', 'family.teach_money', 'family.attend_event', 'family.caregiving', 'family.set_expectations',
+  'family.invite_business', 'family.discuss_inheritance',
+  'markets.research', 'markets.set_strategy', 'markets.rebalance',
+  'business.set_growth_posture', 'business.invest_quality', 'business.invest_rd', 'business.reward_staff', 'business.expand_location',
+  'education.choose_major', 'education.office_hours', 'education.join_club', 'education.internship', 'education.sports_train', 'education.sports_compete', 'education.sports_seek_scholarship',
+  'career.work_hard', 'career.network', 'career.train', 'career.seek_promotion', 'career.office_politics',
+  'organization.found_inner_circle', 'faction.set_archetype', 'faction.recruit', 'faction.hold_gathering', 'faction.collect_contributions',
+  'faction.buy_land', 'faction.spread_doctrine', 'faction.elevate_leader', 'faction.adopt_plural_household', 'faction.invite_plural_spouse',
+  'faction.build_security', 'faction.expand_public_influence', 'faction.member_welfare', 'faction.attempt_power_seizure',
 ]);
 const unknownGameActions = gameActionIds.filter((id) => !nativeActionIds.has(id) && !otaOnlyActions.has(id));
 if (unknownGameActions.length > 0) throw new Error(`Game catalog actions are missing from the native registry or OTA allowlist: ${unknownGameActions.join(', ')}`);
@@ -65,6 +74,8 @@ const executorFiles = [
   path.join(root, 'src', 'engine', 'depthActions.ts'),
   path.join(root, 'src', 'engine', 'supplementalDepth.ts'),
   path.join(root, 'src', 'engine', 'relationshipDepth.ts'),
+  path.join(root, 'src', 'engine', 'trackDepth.ts'),
+  path.join(root, 'src', 'engine', 'factionDepth.ts'),
   path.join(root, 'src', 'state', 'GameProvider.tsx'),
 ];
 const executorSource = executorFiles.filter(fs.existsSync).map((file) => fs.readFileSync(file, 'utf8')).join('\n');
@@ -76,6 +87,7 @@ const implementedActions = new Set([
 const intentionallyPrefixHandled = [
   'health.run', 'health.gym', 'health.group_class', 'health.therapy', 'health.outdoors',
   'politics.press_conference', 'politics.town_hall', 'politics.fundraiser', 'politics.constituent_work',
+  'faction.attempt_power_seizure',
 ];
 for (const action of intentionallyPrefixHandled) implementedActions.add(action);
 const missingHandlers = gameActionIds.filter((id) => !implementedActions.has(id));

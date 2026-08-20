@@ -1,10 +1,12 @@
 import { applyAutonomousWorld } from './autonomousWorld';
 import { applyConsequenceWeb } from './consequenceWeb';
 import { allocateId } from './createWorld';
+import { applyFactionAdvance, executeFactionDepth } from './factionDepth';
 import { recordHistory } from './history';
 import { applyImmersionWorld } from './immersionWorld';
 import { applyLivingWorldPass } from './livingWorld';
 import { executeRelationshipDepth } from './relationshipDepth';
+import { applyTrackDepthAdvance, executeTrackDepth } from './trackDepth';
 import type { ActionResult, Business, FocusArea, IntentAction, WorldState } from './types';
 
 import { WORLD_CONTENT } from '@/content/worldContent';
@@ -228,6 +230,10 @@ function propose(source: WorldState, action: IntentAction): ActionResult {
 }
 
 export function executeSupplementalDepth(source: WorldState, action: IntentAction, confirmed = false): ActionResult | null {
+  const factionResult = executeFactionDepth(source, action, confirmed);
+  if (factionResult) return factionResult;
+  const trackResult = executeTrackDepth(source, action);
+  if (trackResult) return trackResult;
   const relationshipResult = executeRelationshipDepth(source, action, confirmed);
   if (relationshipResult) return relationshipResult;
   if (action.verb === 'relationship.propose') return propose(source, action);
@@ -352,5 +358,7 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
   const lived = applyLivingWorldPass(before, world);
   const autonomous = applyAutonomousWorld(before, lived);
   const immersed = applyImmersionWorld(before, autonomous);
-  return applyConsequenceWeb(before, immersed);
+  const consequence = applyConsequenceWeb(before, immersed);
+  const tracked = applyTrackDepthAdvance(before, consequence);
+  return applyFactionAdvance(before, tracked);
 }

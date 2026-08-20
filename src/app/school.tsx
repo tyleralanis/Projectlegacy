@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { EngineActionButton } from '@/components/EngineActionButton';
 import { SubviewHeader } from '@/components/MenuTile';
 import { playerAgeYears } from '@/engine/createWorld';
+import { getTrackMemory } from '@/engine/trackDepth';
 import type { FocusArea } from '@/engine/types';
 import { useGame } from '@/state/GameProvider';
 import { AppScreen, Body, Card, Heading, ProgressBar, SectionHeader, Stat, StatusPill } from '@/ui/components';
@@ -36,6 +37,8 @@ export default function SchoolScreen() {
     .map((relationship) => ({ relationship, person: world.characters[relationship.characterIds.find((id) => id !== actor.id)!] }))
     .filter((item) => item.person?.isAlive)
     .slice(0, 4);
+  const activities = Object.values(world.organizations).filter((organization) => organization.kind === 'club' && organization.memberIds.includes(actor.id) && !organization.history.some((entry) => entry.startsWith('gym-membership:')));
+  const athleteStory = getTrackMemory(world, 'Track · Athlete development');
 
   const chooseFocus = async (focus: FocusArea) => {
     const next = [focus, ...actor.focuses.filter((item) => item !== focus)].slice(0, 3);
@@ -44,7 +47,7 @@ export default function SchoolScreen() {
 
   return (
     <AppScreen>
-      <SubviewHeader eyebrow="Growing up" title="School" subtitle="Grades matter, but they are not the only thing happening here. Friends, confidence, interests, habits, and skills all leave fingerprints." />
+      <SubviewHeader eyebrow="Growing up" title="School" subtitle="Grades matter, but they are not the only thing happening here. Sports, friends, clubs, confidence, interests, habits, and skills all leave fingerprints." />
 
       {school ? <Card accent>
         <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading>{school.level}</Heading><Body secondary>Harborview Academy · age {age}</Body></View><StatusPill tone={school.recordedGrade >= 80 ? 'success' : school.recordedGrade >= 65 ? 'accent' : 'warning'}>{gradeLabel(school.recordedGrade)}</StatusPill></View>
@@ -59,18 +62,38 @@ export default function SchoolScreen() {
           const selected = actor.focuses.includes(option.focus);
           return <Pressable key={option.focus} onPress={() => { void chooseFocus(option.focus); }} style={({ pressed }) => [styles.choice, { backgroundColor: selected ? colors.accentSoft : colors.surface, borderColor: selected ? colors.accent : colors.border, opacity: pressed ? 0.75 : 1 }]}><Text style={styles.emoji}>{option.icon}</Text><View style={{ flex: 1, gap: 3 }}><Heading size="small">{option.title}</Heading><Body secondary>{option.detail}</Body></View><StatusPill tone={selected ? 'accent' : 'neutral'}>{selected ? 'Focus' : 'Choose'}</StatusPill></Pressable>;
         })}
-        <EngineActionButton title="Put in a real study session" action={{ verb: 'education.study', targetIds: school ? [school.id] : [], parameters: {} }} tone="accent" />
+        <EngineActionButton title="Put in a real study session" action={{ verb: 'education.study', targetIds: [school.id], parameters: {} }} tone="accent" />
+      </View> : null}
+
+      {school && age >= 10 ? <View style={styles.section}>
+        <SectionHeader title="Sports & activities" action={<StatusPill>{activities.length} groups</StatusPill>} />
+        <Card>
+          <Heading size="small">Athletics</Heading>
+          <Body secondary>{athleteStory ?? 'A sport can become a real parallel track. Training improves fitness and discipline but competes with academics and adds stress.'}</Body>
+          <View style={styles.actions}>
+            <EngineActionButton title="Train seriously" action={{ verb: 'education.sports_train', targetIds: [school.id], parameters: {} }} tone="accent" style={styles.actionButton} />
+            <EngineActionButton title="Compete" action={{ verb: 'education.sports_compete', targetIds: [school.id], parameters: {} }} style={styles.actionButton} />
+          </View>
+        </Card>
+        <Card>
+          <Heading size="small">Clubs & interests</Heading>
+          <Body secondary>Joining a group creates a persistent organization and network rather than a one-time stat bump.</Body>
+          <View style={styles.actions}>
+            <EngineActionButton title="Join a student club" action={{ verb: 'education.join_club', targetIds: [school.id], parameters: { club: 'Student Society' } }} style={styles.actionButton} />
+            <EngineActionButton title="Join sports team" action={{ verb: 'education.sports', targetIds: [school.id], parameters: { intensity: 'club' } }} style={styles.actionButton} />
+          </View>
+        </Card>
       </View> : null}
 
       <View style={styles.section}>
         <SectionHeader title="People at school" action={<StatusPill>{peers.length}</StatusPill>} />
         {peers.length === 0 ? <Card><Heading size="small">Still finding your people</Heading><Body secondary>Classmates and friends start appearing as childhood moves forward. The ones who stick around can matter years later.</Body></Card> : peers.map(({ relationship, person }) => <Card key={relationship.id}>
           <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{person.firstName} {person.lastName}</Heading><Body secondary>{relationship.kind} · trust {Math.round(relationship.trust)} · affection {Math.round(relationship.affection)}</Body></View><StatusPill tone={relationship.affection >= 60 ? 'success' : 'accent'}>{relationship.affection >= 60 ? 'Close' : 'Around'}</StatusPill></View>
-          <View style={styles.actions}><EngineActionButton title="Hang out" action={{ verb: 'relationship.spend_time', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} /><EngineActionButton title="Talk" action={{ verb: 'relationship.contact', targetIds: [person.id], parameters: {} }} style={{ flex: 1 }} /></View>
+          <View style={styles.actions}><EngineActionButton title="Hang out" action={{ verb: 'relationship.spend_time', targetIds: [person.id], parameters: {} }} tone="accent" style={styles.actionButton} /><EngineActionButton title="Talk" action={{ verb: 'relationship.contact', targetIds: [person.id], parameters: {} }} style={styles.actionButton} /></View>
         </Card>)}
       </View>
 
-      {age >= 15 ? <Card><Heading size="small">🎓 The next step is getting real</Heading><Body secondary>College and training applications are starting to open. Grades help, but knowledge, reputation, money, and the rest of your life still matter.</Body></Card> : null}
+      {age >= 15 ? <Card><Heading size="small">🎓 The next step is getting real</Heading><Body secondary>College and training applications are starting to open. Grades help, but knowledge, reputation, money, sports, relationships, and the rest of your life still matter.</Body></Card> : null}
     </AppScreen>
   );
 }
@@ -81,5 +104,6 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   choice: { minHeight: 92, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, padding: 14, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   emoji: { fontSize: 26 },
-  actions: { flexDirection: 'row', gap: spacing.sm },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  actionButton: { flexGrow: 1, flexBasis: 130 },
 });
