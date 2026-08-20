@@ -39,18 +39,21 @@ export function ThemeBackdrop() {
 export function ThemeAmbientLayer() {
   const { world } = useGame();
   const { theme } = useAppTheme();
-  const [burst, setBurst] = useState(0);
-  const [active, setActive] = useState(false);
-  const [activeSince, setActiveSince] = useState(0);
   const enabled = Boolean(world)
     && (world?.settings.ambientThemeEffects ?? true)
     && !world?.settings.reducedMotion
     && !world?.settings.highContrast
     && theme.ambient.kind !== 'none';
-  const activeIsFresh = active && Date.now() - activeSince < BURST_DURATION_MS + 1_000;
+
+  if (!enabled) return null;
+  return <AmbientScheduler key={theme.id} kind={theme.ambient.kind} />;
+}
+
+function AmbientScheduler({ kind }: { kind: AmbientEffectKind }) {
+  const [burst, setBurst] = useState(0);
+  const [active, setActive] = useState(false);
 
   useEffect(() => {
-    if (!enabled) return undefined;
     let nextTimer: ReturnType<typeof setTimeout> | undefined;
     let endTimer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false;
@@ -60,7 +63,6 @@ export function ThemeAmbientLayer() {
       nextTimer = setTimeout(() => {
         if (disposed) return;
         setBurst((value) => value + 1);
-        setActiveSince(Date.now());
         setActive(true);
         endTimer = setTimeout(() => {
           if (disposed) return;
@@ -76,10 +78,10 @@ export function ThemeAmbientLayer() {
       if (nextTimer) clearTimeout(nextTimer);
       if (endTimer) clearTimeout(endTimer);
     };
-  }, [enabled, theme.id]);
+  }, []);
 
-  if (!enabled || !activeIsFresh) return null;
-  return <AmbientBurst key={`${theme.id}-${burst}`} kind={theme.ambient.kind} sequence={burst} />;
+  if (!active) return null;
+  return <AmbientBurst key={burst} kind={kind} sequence={burst} />;
 }
 
 function AmbientBurst({ kind, sequence }: { kind: AmbientEffectKind; sequence: number }) {
