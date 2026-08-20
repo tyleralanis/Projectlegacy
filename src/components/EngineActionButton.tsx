@@ -5,7 +5,7 @@ import type { IntentAction } from '@/engine/types';
 import { useGame } from '@/state/GameProvider';
 import { PrimaryButton } from '@/ui/components';
 
-export function EngineActionButton({ title, action, tone = 'neutral', style }: { title: string; action: IntentAction; tone?: 'accent' | 'danger' | 'neutral'; style?: StyleProp<ViewStyle> }) {
+export function EngineActionButton({ title, action, tone = 'neutral', style }: { title: string; action: IntentAction; tone?: 'accent' | 'danger' | 'neutral' | 'warning'; style?: StyleProp<ViewStyle> }) {
   const { busy, performAction } = useGame();
   const run = async (confirmed = false) => {
     const result = await performAction(action, confirmed);
@@ -16,5 +16,5 @@ export function EngineActionButton({ title, action, tone = 'neutral', style }: {
       ]);
     } else if (!result.completed) Alert.alert('Action unavailable', result.message);
   };
-  return <PrimaryButton title={title} tone={tone} style={style} disabled={busy} onPress={() => { void run(); }} />;
+  return <PrimaryButton title={title} tone={tone === 'warning' ? 'neutral' : tone} style={style} disabled={busy} onPress={() => { void run(); }} />;
 }
