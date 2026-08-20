@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { EngineActionButton } from '@/components/EngineActionButton';
 import { SubviewHeader } from '@/components/MenuTile';
+import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { WORLD_CONTENT } from '@/content/worldContent';
 import { careerCompetencies, competency, competencyLabel, effectiveCareerCompetence } from '@/engine/competencies';
 import { playerAgeYears } from '@/engine/createWorld';
@@ -52,10 +53,13 @@ export default function JobsScreen() {
   const currentSkills = current ? careerCompetencies(current).map((key) => ({ key, label: competencyLabel(key), value: competency(world, actor.id, key) })) : [];
   const competence = current ? effectiveCareerCompetence(world, current) : 0;
   const manager = current?.managerId ? world.characters[current.managerId] : undefined;
+  const sportsCareer = current && (current.sector === 'Sports' || /athlete/i.test(current.title)) ? current : undefined;
+  const sportsInjury = Object.values(world.memories).find((memory) => memory.unresolved && memory.participantIds.includes(actor.id) && memory.category.startsWith('Health · Sports injury'));
+  const retiredAthlete = Object.values(world.memories).find((memory) => memory.participantIds.includes(actor.id) && memory.category === 'Athletics · Retired professional');
 
   return (
     <AppScreen>
-      <SubviewHeader eyebrow="Work" title="Career" subtitle="A job is an organization full of people, power, skill, politics, money, responsibility, burnout, and exits. Tenure alone is no longer enough." />
+      <SubviewHeader eyebrow="Work" title="Career" subtitle="A job is an organization full of people, power, skill, politics, money, responsibility, burnout, and exits. Time is part of the compensation package now too." />
       <Card accent>
         <SectionHeader title="Your resume" action={<StatusPill tone="accent">Age {age}</StatusPill>} />
         <View style={styles.stats}><Stat label="Knowledge" value={Math.round(actor.knowledge).toString()} /><Stat label="Reputation" value={Math.round(actor.reputation.professional).toString()} /><Stat label="Experience" value={`${Math.floor(experienceWeeks / 52)}y`} /><Stat label="Degree" value={degree ? 'Yes' : 'No'} /></View>
@@ -71,6 +75,24 @@ export default function JobsScreen() {
           <View style={styles.metric}><View style={styles.row}><Body>Satisfaction</Body><Body secondary>{Math.round(current.satisfaction)}/100</Body></View><ProgressBar value={current.satisfaction} tone={current.satisfaction >= 60 ? 'legacy' : 'danger'} /></View>
           <View style={styles.skillWrap}>{currentSkills.map((skill) => <StatusPill key={skill.key} tone={skill.value >= 70 ? 'success' : skill.value < 45 ? 'warning' : 'neutral'}>{skill.label} {Math.round(skill.value)}</StatusPill>)}</View>
           {manager ? <Body secondary>Mentor / sponsor: {manager.firstName} {manager.lastName}. That relationship can help your career, but it is still a relationship with its own trust and resentment.</Body> : null}
+
+          <Card accent>
+            <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">Your work week is negotiable</Heading><Body secondary>Fewer hours can buy back real time for health, family, school, companies, or simply having a life. The organization can say no, and successful negotiation usually costs pay or promotion velocity.</Body></View><StatusPill tone={(current.hoursPerWeek ?? 40) > 40 ? 'warning' : (current.hoursPerWeek ?? 40) < 40 ? 'success' : 'accent'}>{current.hoursPerWeek ?? 40}h</StatusPill></View>
+            <View style={styles.actions}>
+              {[20, 32, 40, 50].map((hours) => <EngineActionButton key={hours} title={`${hours}h / week`} action={{ verb: 'career.negotiate_hours', targetIds: [current.id], parameters: { hours } }} tone={(current.hoursPerWeek ?? 40) === hours ? 'accent' : 'neutral'} style={styles.actionButton} />)}
+            </View>
+          </Card>
+
+          {sportsCareer ? <Card accent>
+            <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">Professional sports life</Heading><Body secondary>Performance creates fame and money, but the body keeps a clock. Injuries, endorsements, retirement, and the next career all connect to this chapter.</Body></View><StatusPill tone={sportsInjury ? 'warning' : 'success'}>{sportsInjury ? 'Injured' : 'Active'}</StatusPill></View>
+            {sportsInjury ? <Body secondary>{sportsInjury.narrative}</Body> : null}
+            <View style={styles.actions}>
+              <EngineActionButton title="Seek endorsement" action={{ verb: 'sports.sign_endorsement', targetIds: [sportsCareer.id], parameters: {} }} tone="accent" style={styles.actionButton} />
+              {sportsInjury ? <EngineActionButton title="Protect recovery" action={{ verb: 'sports.recover', targetIds: [sportsCareer.id], parameters: {} }} style={styles.actionButton} /> : null}
+              <EngineActionButton title="Retire from playing" action={{ verb: 'sports.retire', targetIds: [sportsCareer.id], parameters: {}, destructive: true }} tone="danger" style={styles.actionButton} />
+            </View>
+          </Card> : null}
+
           <View style={styles.actions}>
             <EngineActionButton title="Push hard" action={{ verb: 'career.work_hard', targetIds: [current.id], parameters: {} }} tone="accent" style={styles.actionButton} />
             <EngineActionButton title="Train skills" action={{ verb: 'career.train', targetIds: [current.id], parameters: {} }} style={styles.actionButton} />
@@ -93,6 +115,8 @@ export default function JobsScreen() {
         </Card>)}
       </View> : <Card><Heading size="small">Between jobs</Heading><Body secondary>You are currently unemployed. That can be temporary, deliberate, or the start of a completely different path.</Body></Card>}
 
+      {retiredAthlete && !sportsCareer ? <Card accent><Heading size="small">The sport is still part of your résumé</Heading><Body secondary>{retiredAthlete.narrative}</Body><EngineActionButton title="Return as a professional coach" action={{ verb: 'sports.coach', targetIds: [], parameters: {} }} tone="accent" /></Card> : null}
+
       <View style={styles.section}>
         <SectionHeader title="This week's openings" action={<StatusPill>{listings.length}</StatusPill>} />
         {listings.map((job) => {
@@ -114,6 +138,8 @@ export default function JobsScreen() {
         })}
         <Body secondary>Listings refresh automatically when the world advances into a new week.</Body>
       </View>
+
+      <OtherActionComposer domains={['career']} placeholder="Another career move, schedule change, or sports transition…" />
     </AppScreen>
   );
 }
