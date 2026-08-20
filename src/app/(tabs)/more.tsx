@@ -43,6 +43,7 @@ export default function MoreScreen() {
           <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading>{world.dynasty.familyName} legacy</Heading><Body secondary>Founded by {world.characters[world.dynasty.founderId]?.firstName} · Generation {world.dynasty.generation}</Body></View><StatusPill tone="warning">{world.dynasty.activeHeirId ? `${world.characters[world.dynasty.activeHeirId]?.firstName} preferred` : 'Open succession'}</StatusPill></View>
           <View style={styles.stats}><Stat label="Family records" value={world.dynasty.notableHistory.length.toString()} /><Stat label="Living family" value={Object.values(world.characters).filter((character) => character.isAlive && character.lastName === world.dynasty.familyName).length.toString()} /><Stat label="Current cash" value={formatMoney(actor.cashCents, true)} /></View>
           {world.dynasty.notableHistory.slice(-5).map((history) => <Body key={history} secondary>• {history}</Body>)}
+          <PrimaryButton title="Open dynasty & succession" onPress={() => router.push('/dynasty' as never)} />
         </Card>
         <View style={styles.actions}><PrimaryButton title="World History" style={{ flex: 1 }} onPress={() => router.push('/history' as never)} /><PrimaryButton title="Search & Pins" tone="neutral" style={{ flex: 1 }} onPress={() => router.push('/search' as never)} /></View>
       </View>
