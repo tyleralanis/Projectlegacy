@@ -59,7 +59,7 @@ export default function InvestingScreen() {
       </View>
 
       {privateDealMemory ? <View style={styles.section}>
-        <SectionHeader title="Private market access" action={<StatusPill tone={privateDealMemory.unresolved ? 'legacy' : 'success'}>{privateDealMemory.unresolved ? 'Deal open' : 'Network active'}</StatusPill>} />
+        <SectionHeader title="Private market access" action={<StatusPill tone={privateDealMemory.unresolved ? 'warning' : 'success'}>{privateDealMemory.unresolved ? 'Deal open' : 'Network active'}</StatusPill>} />
         <Card accent>
           <Heading size="small">Access came from people, not a menu unlock</Heading>
           <Body secondary>{privateDealMemory.narrative}</Body>
@@ -68,7 +68,7 @@ export default function InvestingScreen() {
         {privateHoldings.map((holding) => {
           const security = world.securities[holding.securityId];
           const value = Math.round(holding.unitsMilli * security.priceCents / 1000);
-          return <Card key={holding.id}><View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{security.name}</Heading><Body secondary>Private Markets · illiquid relationship-driven position</Body></View><StatusPill tone="legacy">{formatMoney(value, true)}</StatusPill></View><Body secondary>Quality {Math.round(security.quality)} · risk {Math.round(security.volatility)}. Private access increases the universe of things you can own; it does not remove the possibility that the deal is bad.</Body></Card>;
+          return <Card key={holding.id}><View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{security.name}</Heading><Body secondary>Private Markets · illiquid relationship-driven position</Body></View><StatusPill tone="accent">{formatMoney(value, true)}</StatusPill></View><Body secondary>Quality {Math.round(security.quality)} · risk {Math.round(security.volatility)}. Private access increases the universe of things you can own; it does not remove the possibility that the deal is bad.</Body></Card>;
         })}
       </View> : null}
 
