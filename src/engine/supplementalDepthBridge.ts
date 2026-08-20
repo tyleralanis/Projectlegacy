@@ -11,6 +11,7 @@ import {
   hasGymMembership,
   normalizeSupplementalState as normalizeBaseSupplementalState,
 } from './supplementalDepth';
+import { applySystemPolishAdvance } from './systemPolish';
 import type { ActionResult, IntentAction, WorldState } from './types';
 
 export { ceoCandidates, getTuitionBalance, hasGymMembership };
@@ -45,11 +46,14 @@ export function executeSupplementalDepth(
 /**
  * Renewal state is prepared before the older supplemental pass so legacy
  * expiry logic sees a paid-forward membership. Base systems then run once,
- * followed by recurring life systems and finally owner/manager delegation.
+ * followed by recurring life systems, owner/manager delegation, and a final
+ * consistency pass for recurring cash yield, tuition years, career reviews,
+ * managed leasing, CEO reports, and sports contracts.
  */
 export function applySupplementalAdvance(before: WorldState, after: WorldState): WorldState {
   const prepared = prepareDelegationAdvance(before, after);
   const base = applyBaseSupplementalAdvance(before, prepared);
   const life = applyLifeSystemsAdvance(before, base);
-  return applyDelegationAdvance(before, life);
+  const delegated = applyDelegationAdvance(before, life);
+  return applySystemPolishAdvance(before, delegated);
 }
