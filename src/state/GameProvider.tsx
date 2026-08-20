@@ -7,7 +7,7 @@ import { executeDepthAction } from '@/engine/depthActions';
 import { runDeveloperCommand, type DeveloperCommand } from '@/engine/developerTools';
 import { netWorthCents } from '@/engine/money';
 import { activityLevel, advanceWorld, resolveEvent } from '@/engine/simulation';
-import { applySupplementalAdvance, executeSupplementalDepth, normalizeSupplementalState } from '@/engine/supplementalDepth';
+import { applySupplementalAdvance, executeSupplementalDepth, normalizeSupplementalState } from '@/engine/supplementalDepthBridge';
 import type { AdvanceSummary, FavoriteEntityType, FocusArea, GameSettings, IntentAction, IntentAuditEntry, OutcomeExplanation, WorldState } from '@/engine/types';
 import { toggleFavorite } from '@/engine/worldIndex';
 import { createRepository } from '@/storage';
