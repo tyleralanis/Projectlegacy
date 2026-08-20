@@ -20,6 +20,7 @@ export type Domain =
 export type Severity = 'S0' | 'S1' | 'S2' | 'S3' | 'S4';
 export type FocusArea = 'Academics' | 'Sport' | 'Family' | 'Partner' | 'Job' | 'Startup' | 'Health' | 'Networking' | 'Campaign' | 'Creative Work';
 export type ReputationAudience = 'public' | 'business' | 'employee' | 'political' | 'professional' | 'family' | 'faction';
+export type VisualThemeId = 'classic' | 'cherry-blossom' | 'midnight-luxe' | 'forest-ledger' | 'minimal-light';
 export type CompetencyKey =
   | 'academics'
   | 'communication'
@@ -95,7 +96,19 @@ export interface CountryState { id: EntityId; name: string; population: number; 
 export interface BackgroundSimulationState { population: number; households: number; businesses: number; industries: Record<string, { outputIndex: number; employment: number; confidence: number }>; lastAggregateWeek: number; }
 export interface PerformanceBudgetState { fullNpcLimit: number; standardNpcLimit: number; memoryLimit: number; timelineLimit: number; intentLogLimit: number; }
 export interface DynastyState { founderId: EntityId; activeHeirId?: EntityId; generation: number; familyName: string; notableHistory: string[]; successionPreference: 'oldest-child' | 'most-capable' | 'player-choice'; }
-export interface GameSettings { hapticsEnabled: boolean; reducedMotion: boolean; enhancedAIEnabled: boolean; qualitativeRiskOnly: boolean; highContrast: boolean; autoDownloadUpdates: boolean; developerUnlocked: boolean; }
+export interface GameSettings {
+  hapticsEnabled: boolean;
+  reducedMotion: boolean;
+  enhancedAIEnabled: boolean;
+  qualitativeRiskOnly: boolean;
+  highContrast: boolean;
+  autoDownloadUpdates: boolean;
+  developerUnlocked: boolean;
+  /** Optional for backward compatibility with saves created before visual themes shipped. */
+  visualTheme?: VisualThemeId;
+  /** Optional for backward compatibility. Defaults to true unless reduced-motion/high-contrast accessibility settings suppress it. */
+  ambientThemeEffects?: boolean;
+}
 
 export interface AdvisorServiceState { id: EntityId; kind: 'wealth-manager' | 'private-counsel'; label: string; weeklyCostCents: MoneyCents; quality: number; active: boolean; }
 
