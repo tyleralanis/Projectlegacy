@@ -1,7 +1,7 @@
 import { allocateId, playerAgeYears } from './createWorld';
 import { explain, recordHistory } from './history';
 import { nextRandom } from './random';
-import type { ActionResult, IntentAction, Organization, Relationship, WorldState } from './types';
+import type { ActionResult, Character, IntentAction, Organization, WorldState } from './types';
 
 export type InnerCircleArchetype = 'undecided' | 'religious' | 'military' | 'political' | 'communal' | 'commercial';
 
@@ -38,6 +38,7 @@ const FACTION_VERBS = new Set([
   'faction.expand_public_influence',
   'faction.member_welfare',
   'faction.attempt_power_seizure',
+  'misconduct.faction_power_seizure_attempt',
 ]);
 
 function clone<T>(value: T): T {
@@ -145,7 +146,7 @@ function createFollower(world: WorldState, organization: Organization, index: nu
   const lastNames = ['Vale', 'Brooks', 'Morrow', 'Bennett', 'Reed', 'Shah', 'Park', 'Morgan', 'Price', 'Chen'];
   const id = allocateId(world, 'character');
   const age = 20 + Math.floor(roll(world) * 32);
-  const person = {
+  const person: Character = {
     id,
     firstName: firstNames[(index + Math.floor(roll(world) * firstNames.length)) % firstNames.length],
     lastName: lastNames[(index + Math.floor(roll(world) * lastNames.length)) % lastNames.length],
@@ -153,8 +154,8 @@ function createFollower(world: WorldState, organization: Organization, index: nu
     isAlive: true,
     cityId: actor.cityId,
     householdId: `household-${id}`,
-    parentIds: [] as string[],
-    childIds: [] as string[],
+    parentIds: [],
+    childIds: [],
     cashCents: 50_000 + Math.round(roll(world) * 2_500_000),
     health: 58 + roll(world) * 35,
     mood: 48 + roll(world) * 40,
@@ -167,9 +168,9 @@ function createFollower(world: WorldState, organization: Organization, index: nu
     knowledge: 30 + roll(world) * 60,
     charisma: 30 + roll(world) * 62,
     fitness: 30 + roll(world) * 60,
-    focuses: ['Networking', 'Family', 'Health'] as const,
+    focuses: ['Networking', 'Family', 'Health'],
     reputation: { public: 42, business: 38, employee: 45, political: 30, professional: 42, family: 48, faction: 55 },
-    detailTier: 'standard' as const,
+    detailTier: 'standard',
     lastMeaningfulWeek: world.calendar.week,
   };
   world.characters[id] = person;
@@ -188,6 +189,19 @@ function setProfileNumbers(org: Organization, profile: Partial<Pick<InnerCircleP
   if (profile.doctrine !== undefined) setMarker(org, 'doctrine', Math.round(clamp(profile.doctrine)));
 }
 
+function initialProfile(archetype: InnerCircleArchetype): Pick<InnerCircleProfile, 'followers' | 'devotion' | 'cohesion' | 'security' | 'publicStanding' | 'doctrine'> {
+  if (archetype === 'religious') return { followers: 6, devotion: 38, cohesion: 40, security: 4, publicStanding: 32, doctrine: 36 };
+  if (archetype === 'military') return { followers: 6, devotion: 29, cohesion: 46, security: 16, publicStanding: 29, doctrine: 24 };
+  if (archetype === 'political') return { followers: 6, devotion: 29, cohesion: 39, security: 5, publicStanding: 42, doctrine: 29 };
+  if (archetype === 'communal') return { followers: 6, devotion: 34, cohesion: 50, security: 4, publicStanding: 36, doctrine: 27 };
+  if (archetype === 'commercial') return { followers: 6, devotion: 25, cohesion: 37, security: 4, publicStanding: 40, doctrine: 20 };
+  return { followers: 6, devotion: 28, cohesion: 38, security: 4, publicStanding: 34, doctrine: 22 };
+}
+
+function isPowerSeizureVerb(verb: string): boolean {
+  return verb === 'faction.attempt_power_seizure' || verb === 'misconduct.faction_power_seizure_attempt';
+}
+
 export function executeFactionDepth(source: WorldState, action: IntentAction, confirmed = false): ActionResult | null {
   if (!FACTION_VERBS.has(action.verb)) return null;
   const actor = source.characters[source.playerCharacterId];
@@ -201,20 +215,22 @@ export function executeFactionDepth(source: WorldState, action: IntentAction, co
     const nextActor = world.characters[world.playerCharacterId];
     const organizationId = allocateId(world, 'organization');
     const name = typeof action.parameters.name === 'string' && action.parameters.name.trim() ? action.parameters.name.trim().slice(0, 50) : 'The Inner Circle';
+    const requested = typeof action.parameters.archetype === 'string' ? action.parameters.archetype : 'undecided';
+    const archetype: InnerCircleArchetype = ['religious', 'military', 'political', 'communal', 'commercial'].includes(requested) ? requested as InnerCircleArchetype : 'undecided';
     nextActor.cashCents -= startup;
     const organization: Organization = {
       id: organizationId,
       kind: 'faction',
       name,
-      resourcesCents: startup,
-      influence: 7,
+      resourcesCents: archetype === 'commercial' ? startup + 300_000 : startup,
+      influence: archetype === 'political' ? 16 : archetype === 'commercial' ? 12 : 7,
       stability: 48,
       memberIds: [nextActor.id],
       leaderId: nextActor.id,
       history: [`Founded privately by ${nextActor.firstName} ${nextActor.lastName} in week ${world.calendar.week}.`],
     };
-    setMarker(organization, 'archetype', 'undecided');
-    setProfileNumbers(organization, { followers: 6, devotion: 28, cohesion: 38, security: 4, publicStanding: 34, doctrine: 22 });
+    setMarker(organization, 'archetype', archetype);
+    setProfileNumbers(organization, initialProfile(archetype));
     setMarker(organization, 'land', false);
     setMarker(organization, 'veneration', false);
     setMarker(organization, 'plural', false);
@@ -223,14 +239,15 @@ export function executeFactionDepth(source: WorldState, action: IntentAction, co
     world.transactions.push({ id: allocateId(world, 'transaction'), week: world.calendar.week, kind: 'private-movement-startup', amountCents: -startup, fromId: nextActor.id, toId: organizationId, memo: `Founded ${name}` });
     nextActor.reputation.faction = clamp(nextActor.reputation.faction + 5);
     recordHistory(world, 'organization', 'A private movement begins', `${name} exists now, but it is intentionally absent from the normal organization menus. Its structure only becomes visible because you asked to create it.`, { subjectIds: [organizationId], importance: 3 });
-    return ok(world, `${name} has started quietly. A private Inner Circle view is now available under Work & ambition.`);
+    return ok(world, `${name} has started quietly${archetype === 'undecided' ? '' : ` as a ${archetype} movement`}. A private Inner Circle view is now available under Work & ambition.`);
   }
 
   const organization = targetInnerCircle(source, action);
+  if (!organization && action.verb === 'misconduct.faction_power_seizure_attempt') return null;
   if (!organization || organization.leaderId !== actor.id) return blocked(source, 'You do not currently lead an unlocked private movement.');
   const profile = innerCircleProfile(source)!;
 
-  if (action.verb === 'faction.attempt_power_seizure' && !confirmed) {
+  if (isPowerSeizureVerb(action.verb) && !confirmed) {
     return { world: source, message: 'This is a high-stakes fictional attempt to seize national power. The game models only strategic readiness, institutional resistance, and consequences—not tactics.', validation: { valid: true, requiresConfirmation: true } };
   }
 
@@ -253,8 +270,7 @@ export function executeFactionDepth(source: WorldState, action: IntentAction, co
   }
 
   if (action.verb === 'faction.recruit') {
-    const charisma = nextActor.charisma;
-    const gain = Math.max(2, Math.round(2 + org.influence / 7 + profile.publicStanding / 13 + charisma / 16 + roll(world) * 9));
+    const gain = Math.max(2, Math.round(2 + org.influence / 7 + profile.publicStanding / 13 + nextActor.charisma / 16 + roll(world) * 9));
     const newFollowers = profile.followers + gain;
     setProfileNumbers(org, { followers: newFollowers, devotion: profile.devotion + (profile.archetype === 'religious' ? 1.5 : 0.6), cohesion: profile.cohesion - Math.max(0, gain - 8) * 0.12 });
     org.influence = clamp(org.influence + Math.min(3, gain / 5));
@@ -292,7 +308,7 @@ export function executeFactionDepth(source: WorldState, action: IntentAction, co
     world.properties[propertyId] = { id: propertyId, name: `${org.name} grounds`, kind: 'land', cityId: nextActor.cityId, ownerId: org.id, valueCents: cost, debtCents: 0, condition: 68, occupancy: 'vacant', weeklyRentCents: 0, weeklyCostsCents: Math.round(cost * 0.00022), managed: false };
     setMarker(org, 'land', true);
     setProfileNumbers(org, { cohesion: profile.cohesion + 5, publicStanding: profile.publicStanding - (profile.archetype === 'communal' ? 0 : 1.5) });
-    recordHistory(world, 'property', `${org.name} acquired land`, `The movement now has a physical base. Land creates permanence, costs, visibility, and a place future stories can attach to.`, { subjectIds: [org.id, propertyId], importance: 3 });
+    recordHistory(world, 'property', `${org.name} acquired land`, 'The movement now has a physical base. Land creates permanence, costs, visibility, and a place future stories can attach to.', { subjectIds: [org.id, propertyId], importance: 3 });
     return ok(world, `${org.name} bought land for ${(cost / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}. The movement now has a physical base and recurring property costs.`);
   }
 
@@ -310,7 +326,7 @@ export function executeFactionDepth(source: WorldState, action: IntentAction, co
     setProfileNumbers(org, { devotion: profile.devotion + 13, doctrine: profile.doctrine + 8, cohesion: profile.cohesion + 3, publicStanding: profile.publicStanding - 9 });
     nextActor.reputation.faction = clamp(nextActor.reputation.faction + 8);
     addExposure(world, 28, 22 + roll(world) * 24, 20 + roll(world) * 26, 'leader-veneration');
-    return ok(world, `The movement now openly centers its identity on you. Devotion rose sharply, while outside legitimacy and resilience to leadership failure got worse.`);
+    return ok(world, 'The movement now openly centers its identity on you. Devotion rose sharply, while outside legitimacy and resilience to leadership failure got worse.');
   }
 
   if (action.verb === 'faction.adopt_plural_household') {
@@ -332,16 +348,13 @@ export function executeFactionDepth(source: WorldState, action: IntentAction, co
       if (existing) existing.resentment = clamp(existing.resentment + 6);
       return ok(world, `${candidate.firstName} declined the invitation. The movement’s doctrine does not override an individual adult’s choice.`);
     }
-    let relationship: Relationship;
     if (existing) {
       existing.kind = 'spouse';
       existing.trust = clamp(existing.trust + 4);
       existing.affection = clamp(existing.affection + 8);
-      relationship = existing;
     } else {
       const relationshipId = allocateId(world, 'relationship');
-      relationship = { id: relationshipId, characterIds: [nextActor.id, candidate.id], kind: 'spouse', trust: 52, affection: 62, respect: 48, resentment: 2, lastInteractionWeek: world.calendar.week };
-      world.relationships[relationshipId] = relationship;
+      world.relationships[relationshipId] = { id: relationshipId, characterIds: [nextActor.id, candidate.id], kind: 'spouse', trust: 52, affection: 62, respect: 48, resentment: 2, lastInteractionWeek: world.calendar.week };
     }
     if (!nextActor.partnerId) {
       nextActor.partnerId = candidate.id;
@@ -349,7 +362,7 @@ export function executeFactionDepth(source: WorldState, action: IntentAction, co
     }
     org.history.push(`Plural spouse:${candidate.id}:week:${world.calendar.week}`);
     setProfileNumbers(org, { devotion: profile.devotion + 2, publicStanding: profile.publicStanding - 2 });
-    recordHistory(world, 'relationship', `${candidate.firstName} joined the plural household`, `An additional adult spouse relationship now exists alongside the movement’s doctrine. Consent mattered to the outcome, and the relationship can develop independently from the organization.`, { subjectIds: [nextActor.id, candidate.id, org.id], importance: 4, important: true });
+    recordHistory(world, 'relationship', `${candidate.firstName} joined the plural household`, 'An additional adult spouse relationship now exists alongside the movement’s doctrine. Consent mattered to the outcome, and the relationship can develop independently from the organization.', { subjectIds: [nextActor.id, candidate.id, org.id], importance: 4, important: true });
     return ok(world, `${candidate.firstName} accepted the invitation and is now an additional spouse in the household.`);
   }
 
@@ -387,7 +400,7 @@ export function executeFactionDepth(source: WorldState, action: IntentAction, co
     return ok(world, `${org.name} spent resources on member welfare. It grows slower this way, but people are more stable and cohesion is less dependent on fear or charisma.`);
   }
 
-  if (action.verb === 'faction.attempt_power_seizure') {
+  if (isPowerSeizureVerb(action.verb)) {
     const country = world.countries[world.activeCountryId];
     const readiness = clamp(
       Math.log10(Math.max(10, profile.followers)) * 10
@@ -462,7 +475,7 @@ export function applyFactionAdvance(before: WorldState, source: WorldState): Wor
   });
   if (weeks >= 26 && nextProfile.followers >= 250 && !org.history.some((entry) => entry.startsWith('milestone:250'))) {
     org.history.push(`milestone:250:week:${world.calendar.week}`);
-    recordHistory(world, 'organization', `${org.name} stopped being small`, `The movement has enough followers, money, and internal history that leadership mistakes can now become organizational crises instead of personal disagreements.`, { subjectIds: [org.id], importance: 3 });
+    recordHistory(world, 'organization', `${org.name} stopped being small`, 'The movement has enough followers, money, and internal history that leadership mistakes can now become organizational crises instead of personal disagreements.', { subjectIds: [org.id], importance: 3 });
   }
   return world;
 }
