@@ -47,6 +47,10 @@ describe('continuity polish', () => {
   it('tracks whether a preferred heir is actually becoming capable of inheriting responsibility', () => {
     const before = createWorld({ seed: 'successor-continuity', startAgeYears: 55, nowISO: '2026-08-20T00:00:00.000Z' });
     const actor = before.characters[before.playerCharacterId];
+    // Move to the final week of the current simulation year without rewinding
+    // the adult life into childhood. Advancing one week now crosses a real
+    // annual boundary while every birthWeek remains meaningful.
+    before.calendar.week = Math.floor(before.calendar.week / 52) * 52 + 51;
     const heirId = 'heir-continuity';
     before.characters[heirId] = {
       ...clone(actor),
@@ -62,7 +66,6 @@ describe('continuity polish', () => {
     actor.childIds.push(heirId);
     before.relationships.heir = { id: 'heir', characterIds: [actor.id, heirId], kind: 'child', trust: 88, affection: 84, respect: 90, resentment: 3, lastInteractionWeek: before.calendar.week };
     before.dynasty.activeHeirId = heirId;
-    before.calendar.week = 51;
 
     const after = applyContinuityPolish(before, advanceCopy(before, 1));
     const memory = Object.values(after.memories).find((item) => item.category === 'Dynasty · Successor readiness');
