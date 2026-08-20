@@ -1,5 +1,10 @@
 [
-  { "id": "organization-harborview-university", "name": "Harborview University", "prestige": 72, "network": 68, "tuitionCentsPerYear": 2400000, "minimumAge": 16, "maximumAge": 110 },
-  { "id": "organization-commonwealth-institute", "name": "Commonwealth Institute", "prestige": 91, "network": 89, "tuitionCentsPerYear": 6200000, "minimumAge": 16, "maximumAge": 110 },
-  { "id": "organization-harbor-trades", "name": "Harbor Technical College", "prestige": 54, "network": 61, "tuitionCentsPerYear": 980000, "minimumAge": 15, "maximumAge": 110 }
+  { "id": "organization-harborview-university", "name": "Harborview University", "cityId": "city-harborview", "prestige": 72, "network": 68, "tuitionCentsPerYear": 2400000, "minimumAge": 16, "maximumAge": 110, "admissionKnowledge": 52, "admissionReputation": 25 },
+  { "id": "organization-commonwealth-institute", "name": "Commonwealth Institute", "cityId": "city-bayport", "prestige": 91, "network": 89, "tuitionCentsPerYear": 6200000, "minimumAge": 16, "maximumAge": 110, "admissionKnowledge": 78, "admissionReputation": 45 },
+  { "id": "organization-harbor-trades", "name": "Harbor Technical College", "cityId": "city-harborview", "prestige": 54, "network": 61, "tuitionCentsPerYear": 980000, "minimumAge": 15, "maximumAge": 110, "admissionKnowledge": 35, "admissionReputation": 15 },
+  { "id": "organization-bayport-state", "name": "Bayport State", "cityId": "city-bayport", "prestige": 64, "network": 72, "tuitionCentsPerYear": 1900000, "minimumAge": 16, "maximumAge": 110, "admissionKnowledge": 47, "admissionReputation": 20 },
+  { "id": "organization-pine-ridge-college", "name": "Pine Ridge College", "cityId": "city-pine-ridge", "prestige": 49, "network": 52, "tuitionCentsPerYear": 1250000, "minimumAge": 16, "maximumAge": 110, "admissionKnowledge": 38, "admissionReputation": 15 },
+  { "id": "organization-northbridge-university", "name": "Northbridge University", "cityId": "city-northbridge", "prestige": 84, "network": 86, "tuitionCentsPerYear": 5100000, "minimumAge": 16, "maximumAge": 110, "admissionKnowledge": 70, "admissionReputation": 38 },
+  { "id": "organization-lakemont-college", "name": "Lakemont College", "cityId": "city-lakemont", "prestige": 67, "network": 66, "tuitionCentsPerYear": 2600000, "minimumAge": 16, "maximumAge": 110, "admissionKnowledge": 50, "admissionReputation": 25 },
+  { "id": "organization-sunport-university", "name": "Sunport University", "cityId": "city-sunport", "prestige": 70, "network": 76, "tuitionCentsPerYear": 1700000, "minimumAge": 16, "maximumAge": 110, "admissionKnowledge": 48, "admissionReputation": 22 }
 ]

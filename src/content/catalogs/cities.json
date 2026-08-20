@@ -1,0 +1,11 @@
+[
+  { "id": "city-harborview", "name": "Harborview", "countryId": "country-harbor-republic", "costIndex": 100, "jobIndex": 78, "housingIndex": 96, "moveCostCents": 180000 },
+  { "id": "city-bayport", "name": "Bayport", "countryId": "country-harbor-republic", "costIndex": 118, "jobIndex": 88, "housingIndex": 121, "moveCostCents": 320000 },
+  { "id": "city-pine-ridge", "name": "Pine Ridge", "countryId": "country-harbor-republic", "costIndex": 79, "jobIndex": 57, "housingIndex": 73, "moveCostCents": 240000 },
+  { "id": "city-northbridge", "name": "Northbridge", "countryId": "country-northland", "costIndex": 112, "jobIndex": 91, "housingIndex": 116, "moveCostCents": 680000 },
+  { "id": "city-lakemont", "name": "Lakemont", "countryId": "country-northland", "costIndex": 94, "jobIndex": 74, "housingIndex": 88, "moveCostCents": 610000 },
+  { "id": "city-ironvale", "name": "Ironvale", "countryId": "country-northland", "costIndex": 84, "jobIndex": 81, "housingIndex": 77, "moveCostCents": 590000 },
+  { "id": "city-sunport", "name": "Sunport", "countryId": "country-sundara", "costIndex": 72, "jobIndex": 69, "housingIndex": 65, "moveCostCents": 760000 },
+  { "id": "city-miraj", "name": "Miraj City", "countryId": "country-sundara", "costIndex": 88, "jobIndex": 82, "housingIndex": 80, "moveCostCents": 820000 },
+  { "id": "city-green-basin", "name": "Green Basin", "countryId": "country-sundara", "costIndex": 61, "jobIndex": 51, "housingIndex": 55, "moveCostCents": 710000 }
+]
