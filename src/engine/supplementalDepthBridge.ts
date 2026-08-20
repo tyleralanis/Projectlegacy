@@ -1,4 +1,5 @@
 import { executeCareerApplication } from './careerApplicationBridge';
+import { applyDelegationAdvance, executeDelegationDepth, prepareDelegationAdvance } from './delegationDepth';
 import { executeSecondarySchoolApplication } from './educationApplicationBridge';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
 import {
@@ -12,6 +13,7 @@ import {
 import type { ActionResult, IntentAction, WorldState } from './types';
 
 export { ceoCandidates, getTuitionBalance, hasGymMembership, normalizeSupplementalState };
+export { businessRunwayReserveCents, distributableBusinessCashCents, portfolioManagementFeeWeeklyCents, propertyManagerActive } from './delegationDepth';
 
 /**
  * OTA-safe extension point for life systems that were added after the original
@@ -28,18 +30,21 @@ export function executeSupplementalDepth(
   if (earlyApplication) return earlyApplication;
   const careerApplication = executeCareerApplication(source, action);
   if (careerApplication) return careerApplication;
+  const delegated = executeDelegationDepth(source, action);
+  if (delegated) return delegated;
   const systemic = executeLifeSystemsDepth(source, action);
   if (systemic) return systemic;
   return executeBaseSupplementalDepth(source, action, confirmed);
 }
 
 /**
- * Base supplemental effects run first. The systemic pass then consumes the
- * same before/after interval so lifestyle, advisor renewals, tenants,
- * development projects, sports careers, health pressure, and NPC education
- * all advance exactly once per player time jump.
+ * Renewal state is prepared before the older supplemental pass so legacy
+ * expiry logic sees a paid-forward membership. Base systems then run once,
+ * followed by recurring life systems and finally owner/manager delegation.
  */
 export function applySupplementalAdvance(before: WorldState, after: WorldState): WorldState {
-  const base = applyBaseSupplementalAdvance(before, after);
-  return applyLifeSystemsAdvance(before, base);
+  const prepared = prepareDelegationAdvance(before, after);
+  const base = applyBaseSupplementalAdvance(before, prepared);
+  const life = applyLifeSystemsAdvance(before, base);
+  return applyDelegationAdvance(before, life);
 }
