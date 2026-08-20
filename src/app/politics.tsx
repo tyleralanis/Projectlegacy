@@ -40,18 +40,18 @@ export default function PoliticsScreen() {
 
       <View style={styles.section}>
         <SectionHeader title="Build approval" />
-        <Card><Heading size="small">Press conference</Heading><Body secondary>High upside, high embarrassment potential. Weak public speaking can make this actively worse.</Body><EngineActionButton title="Hold press conference · $1,200" action={{ verb: 'politics.press_conference', targetIds: [], parameters: {} }} tone="accent" /></Card>
-        <Card><Heading size="small">Town hall</Heading><Body secondary>Empathy and listening matter. Less flashy, more forgiving.</Body><EngineActionButton title="Host town hall · $450" action={{ verb: 'politics.town_hall', targetIds: [], parameters: {} }} tone="accent" /></Card>
-        <Card><Heading size="small">Fundraiser</Heading><Body secondary>Charisma and business reputation drive the room. During a campaign, a good night also adds campaign cash.</Body><EngineActionButton title="Host fundraiser · $900" action={{ verb: 'politics.fundraiser', targetIds: [], parameters: {} }} tone="accent" /></Card>
-        <Card><Heading size="small">Constituent work</Heading><Body secondary>Unsexy and cheap. Good empathy can build durable support one boring problem at a time.</Body><EngineActionButton title="Meet constituents · $150" action={{ verb: 'politics.constituent_work', targetIds: [], parameters: {} }} /></Card>
+        <Card><Heading size="small">🎙️ Press conference</Heading><Body secondary>High upside, high embarrassment potential. Weak public speaking can make this actively worse.</Body><EngineActionButton title="Hold press conference · $1,200" action={{ verb: 'politics.press_conference', targetIds: [], parameters: {} }} tone="accent" /></Card>
+        <Card><Heading size="small">🏫 Town hall</Heading><Body secondary>Empathy and listening matter. Less flashy, more forgiving.</Body><EngineActionButton title="Host town hall · $450" action={{ verb: 'politics.town_hall', targetIds: [], parameters: {} }} tone="accent" /></Card>
+        <Card><Heading size="small">🥂 Fundraiser</Heading><Body secondary>Charisma and business reputation drive the room. During a campaign, a good night also adds campaign cash.</Body><EngineActionButton title="Host fundraiser · $900" action={{ verb: 'politics.fundraiser', targetIds: [], parameters: {} }} tone="accent" /></Card>
+        <Card><Heading size="small">🤝 Constituent work</Heading><Body secondary>Unsexy and cheap. Good empathy can build durable support one boring problem at a time.</Body><EngineActionButton title="Meet constituents · $150" action={{ verb: 'politics.constituent_work', targetIds: [], parameters: {} }} /></Card>
       </View>
 
       <View style={styles.section}>
-        <SectionHeader title="Eligible offices" />
+        <SectionHeader title="Office ladder" />
         {offices.map((office) => (
           <Card key={office.name}>
             <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{office.name}</Heading><Body secondary>Age {office.minAge}+ · political rep {office.rep}+ · approval {office.approval}+ · campaign seed {formatMoney(office.cost, true)}</Body></View><StatusPill tone={office.eligible ? 'success' : 'warning'}>{office.eligible ? 'Eligible' : 'Locked'}</StatusPill></View>
-            <EngineActionButton title={`Run for ${office.name}`} action={{ verb: 'politics.run_for_office', targetIds: [], parameters: { office: office.name, amountCents: office.cost } }} tone={office.eligible ? 'accent' : 'neutral'} />
+            {office.eligible ? <EngineActionButton title={`Run for ${office.name}`} action={{ verb: 'politics.run_for_office', targetIds: [], parameters: { office: office.name, amountCents: office.cost } }} tone="accent" /> : <Body secondary>Build the missing age, reputation, or public support before this office becomes a real option.</Body>}
           </Card>
         ))}
       </View>
