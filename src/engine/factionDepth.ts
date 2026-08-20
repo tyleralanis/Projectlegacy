@@ -1,5 +1,6 @@
 import { allocateId, playerAgeYears } from './createWorld';
 import { explain, recordHistory } from './history';
+import { executePluralRelationshipDepth } from './pluralRelationshipDepth';
 import { nextRandom } from './random';
 import type { ActionResult, Character, IntentAction, Organization, WorldState } from './types';
 
@@ -203,6 +204,8 @@ function isPowerSeizureVerb(verb: string): boolean {
 }
 
 export function executeFactionDepth(source: WorldState, action: IntentAction, confirmed = false): ActionResult | null {
+  const pluralRelationshipResult = executePluralRelationshipDepth(source, action, confirmed);
+  if (pluralRelationshipResult) return pluralRelationshipResult;
   if (!FACTION_VERBS.has(action.verb)) return null;
   const actor = source.characters[source.playerCharacterId];
 
