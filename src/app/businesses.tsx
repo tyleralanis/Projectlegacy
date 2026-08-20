@@ -6,6 +6,7 @@ import { SubviewHeader } from '@/components/MenuTile';
 import { WORLD_CONTENT } from '@/content/worldContent';
 import { formatMoney } from '@/engine/money';
 import { ceoCandidates } from '@/engine/supplementalDepth';
+import { getTrackMemory } from '@/engine/trackDepth';
 import { useGame } from '@/state/GameProvider';
 import { AppScreen, Body, Card, Heading, ProgressBar, SectionHeader, Stat, StatusPill } from '@/ui/components';
 import { radius, spacing, useAppTheme } from '@/ui/theme';
@@ -44,7 +45,7 @@ export default function BusinessesScreen() {
 
   return (
     <AppScreen>
-      <SubviewHeader eyebrow="Work" title="Businesses" subtitle="Ownership is not free time. Run one yourself, or hire leadership before stacking companies on top of a career." />
+      <SubviewHeader eyebrow="Work" title="Businesses" subtitle="A company can be the whole game: choose how hard it grows, where money goes, who leads it, how employees are treated, when to expand, and when to sell." />
       <Card accent>
         <View style={styles.stats}><Stat label="Companies" value={businesses.length.toString()} /><Stat label="Owner-led" value={ownerLed.length.toString()} /><Stat label="Day job" value={activeCareer ? 'Yes' : 'No'} /><Stat label="Business rep" value={Math.round(actor.reputation.business).toString()} /></View>
         {ownerLed.length > 0 && activeCareer ? <Body secondary>You are balancing a day job with an owner-led company. Starting another company is blocked until you delegate or leave the job.</Body> : null}
@@ -71,26 +72,51 @@ export default function BusinessesScreen() {
           const leader = org?.leaderId ? world.characters[org.leaderId] : undefined;
           const ceo = business.delegated && leader && leader.id !== actor.id ? leader : undefined;
           const overload = business.demand / Math.max(1, business.capacity);
+          const rdStory = getTrackMemory(world, `Business · ${business.id} R&D`);
+          const cultureStory = getTrackMemory(world, `Business · ${business.id} culture`);
           return (
             <Card key={business.id}>
               <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading>{business.name}</Heading><Body secondary>{business.sector} · {business.employees} employees · {business.delegated ? 'Professionally managed' : 'Owner-led'}</Body></View><StatusPill tone={business.cashCents > 0 ? 'success' : 'danger'}>{formatMoney(business.valuationCents, true)}</StatusPill></View>
               <View style={styles.stats}><Stat label="Weekly revenue" value={formatMoney(business.revenueWeeklyCents, true)} /><Stat label="Weekly cost" value={formatMoney(business.costWeeklyCents, true)} /><Stat label="Cash" value={formatMoney(business.cashCents, true)} tone={business.cashCents < 0 ? 'danger' : 'default'} /><Stat label="Ownership" value={`${(business.playerOwnershipBps / 100).toFixed(1)}%`} /></View>
               <View style={{ gap: 7 }}><View style={styles.row}><Body>Demand / capacity</Body><Body secondary>{Math.round(business.demand)} / {Math.round(business.capacity)}</Body></View><ProgressBar value={Math.min(100, overload * 70)} tone={overload > 1 ? 'danger' : 'success'} /></View>
+
+              <Card accent>
+                <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">Growth strategy</Heading><Body secondary>Current posture: {business.growthPosture}. Aggressive growth creates more demand and pressure; conservative growth gives execution and cash more room.</Body></View><StatusPill tone={business.growthPosture === 'aggressive' ? 'warning' : business.growthPosture === 'conservative' ? 'success' : 'accent'}>{business.growthPosture}</StatusPill></View>
+                <View style={styles.actions}>
+                  <EngineActionButton title="Conservative" action={{ verb: 'business.set_growth_posture', targetIds: [business.id], parameters: { posture: 'conservative' } }} style={styles.actionButton} />
+                  <EngineActionButton title="Balanced" action={{ verb: 'business.set_growth_posture', targetIds: [business.id], parameters: { posture: 'balanced' } }} style={styles.actionButton} />
+                  <EngineActionButton title="Aggressive" action={{ verb: 'business.set_growth_posture', targetIds: [business.id], parameters: { posture: 'aggressive' } }} tone="accent" style={styles.actionButton} />
+                </View>
+              </Card>
+
+              <View style={styles.section}>
+                <Heading size="small">Where should company cash go?</Heading>
+                <View style={styles.actions}>
+                  <EngineActionButton title="Quality · $10k" action={{ verb: 'business.invest_quality', targetIds: [business.id], parameters: { amountCents: 1_000_000 } }} tone="accent" style={styles.actionButton} />
+                  <EngineActionButton title="R&D · $10k" action={{ verb: 'business.invest_rd', targetIds: [business.id], parameters: { amountCents: 1_000_000 } }} style={styles.actionButton} />
+                  <EngineActionButton title="Staff bonuses · $5k" action={{ verb: 'business.reward_staff', targetIds: [business.id], parameters: { amountCents: 500_000 } }} style={styles.actionButton} />
+                  <EngineActionButton title="New location · $50k" action={{ verb: 'business.expand_location', targetIds: [business.id], parameters: { amountCents: 5_000_000 } }} style={styles.actionButton} />
+                </View>
+                {rdStory ? <Body secondary>{rdStory}</Body> : null}
+                {cultureStory ? <Body secondary>{cultureStory}</Body> : null}
+              </View>
+
               {ceo || business.managerName ? <Card accent><View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">CEO · {ceo ? `${ceo.firstName} ${ceo.lastName}` : business.managerName}</Heading><Body secondary>Management quality {Math.round(business.managerQuality ?? (ceo ? (ceo.discipline + ceo.charisma + ceo.ambition) / 3 : 50))}/100 · salary {formatMoney(business.managerSalaryWeeklyCents ?? 0, true)}/week</Body></View><StatusPill tone="success">Delegated</StatusPill></View><Pressable onPress={() => setHeadhuntBusinessId(business.id)}><Body secondary>Replace or benchmark this CEO ›</Body></Pressable></Card> : <Pressable onPress={() => setHeadhuntBusinessId(business.id)} style={[styles.headhunt, { backgroundColor: colors.accentSoft, borderColor: colors.accent }]}><Text style={styles.headhuntEmoji}>🧠</Text><View style={{ flex: 1, gap: 2 }}><Heading size="small">Headhunt & hire a CEO</Heading><Body secondary>Compare salary, management, leadership, finance, and sector fit.</Body></View><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></Pressable>}
+
               <View style={styles.actions}>
-                <EngineActionButton title="Hire employee" action={{ verb: 'business.hire', targetIds: [business.id], parameters: { count: 1 } }} style={{ flex: 1 }} />
-                <EngineActionButton title="Add $10k capital" action={{ verb: 'business.contribute_capital', targetIds: [business.id], parameters: { amountCents: 1_000_000 } }} style={{ flex: 1 }} />
-                <EngineActionButton title="Borrow $25k" action={{ verb: 'business.borrow', targetIds: [business.id], parameters: { amountCents: 2_500_000 } }} style={{ flex: 1 }} />
+                <EngineActionButton title="Hire employee" action={{ verb: 'business.hire', targetIds: [business.id], parameters: { count: 1 } }} style={styles.actionButton} />
+                <EngineActionButton title="Add $10k capital" action={{ verb: 'business.contribute_capital', targetIds: [business.id], parameters: { amountCents: 1_000_000 } }} style={styles.actionButton} />
+                <EngineActionButton title="Borrow $25k" action={{ verb: 'business.borrow', targetIds: [business.id], parameters: { amountCents: 2_500_000 } }} style={styles.actionButton} />
               </View>
               <View style={styles.actions}>
-                <EngineActionButton title="Value pricing" action={{ verb: 'business.set_price', targetIds: [business.id], parameters: { position: 'value' } }} style={{ flex: 1 }} />
-                <EngineActionButton title="Market pricing" action={{ verb: 'business.set_price', targetIds: [business.id], parameters: { position: 'market' } }} style={{ flex: 1 }} />
-                <EngineActionButton title="Premium pricing" action={{ verb: 'business.set_price', targetIds: [business.id], parameters: { position: 'premium' } }} style={{ flex: 1 }} />
+                <EngineActionButton title="Value pricing" action={{ verb: 'business.set_price', targetIds: [business.id], parameters: { position: 'value' } }} style={styles.actionButton} />
+                <EngineActionButton title="Market pricing" action={{ verb: 'business.set_price', targetIds: [business.id], parameters: { position: 'market' } }} style={styles.actionButton} />
+                <EngineActionButton title="Premium pricing" action={{ verb: 'business.set_price', targetIds: [business.id], parameters: { position: 'premium' } }} style={styles.actionButton} />
               </View>
               <View style={styles.actions}>
-                <EngineActionButton title="Marketing 5%" action={{ verb: 'business.advertise', targetIds: [business.id], parameters: { marketingBps: 500 } }} style={{ flex: 1 }} />
-                <EngineActionButton title="Marketing 15%" action={{ verb: 'business.advertise', targetIds: [business.id], parameters: { marketingBps: 1500 } }} style={{ flex: 1 }} />
-                <EngineActionButton title="Raise capital" action={{ verb: 'business.raise_capital', targetIds: [business.id], parameters: { equityBps: 1500 } }} style={{ flex: 1 }} />
+                <EngineActionButton title="Marketing 5%" action={{ verb: 'business.advertise', targetIds: [business.id], parameters: { marketingBps: 500 } }} style={styles.actionButton} />
+                <EngineActionButton title="Marketing 15%" action={{ verb: 'business.advertise', targetIds: [business.id], parameters: { marketingBps: 1500 } }} style={styles.actionButton} />
+                <EngineActionButton title="Raise capital" action={{ verb: 'business.raise_capital', targetIds: [business.id], parameters: { equityBps: 1500 } }} style={styles.actionButton} />
               </View>
               <EngineActionButton title="Sell business" action={{ verb: 'business.sell', targetIds: [business.id], parameters: {}, destructive: true }} tone="danger" />
             </Card>
@@ -106,6 +132,7 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   row: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  actionButton: { flexGrow: 1, flexBasis: 135 },
   grid: { gap: spacing.md },
   sectorCard: { gap: spacing.sm },
   inlineBack: { alignSelf: 'flex-start', minHeight: 38, borderRadius: radius.pill, paddingHorizontal: 12, justifyContent: 'center' },
