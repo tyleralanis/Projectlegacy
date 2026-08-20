@@ -7,6 +7,7 @@ export const LIFE_SYSTEM_ACTION_CATALOG: ActionDefinition[] = [
   { id: 'health.checkup', domain: 'health', label: 'Get a checkup', summary: 'Use preventive care to monitor health pressure before it becomes a crisis.' },
   { id: 'health.rehab', domain: 'health', label: 'Do rehab', summary: 'Actively manage an injury or persistent health issue with time and healthcare cost.' },
   { id: 'health.rest_week', domain: 'health', label: 'Take a recovery week', summary: 'Give up some short-term output so stress, mood, and health can recover.' },
+  { id: 'health.cancel_gym_membership', domain: 'health', label: 'Cancel gym membership', summary: 'End the annual auto-renewing gym membership without a refund for time already used.' },
   { id: 'property.screen_tenant', domain: 'property', label: 'Screen a tenant', summary: 'Turn vacancy into a persistent tenant relationship rather than an anonymous occupancy flag.' },
   { id: 'property.repair', domain: 'property', label: 'Repair property', summary: 'Spend cash to improve condition, value, and the tenant relationship together.' },
   { id: 'property.develop', domain: 'property', label: 'Develop land', summary: 'Commit capital and carrying costs to turn an owned land parcel into an operating multifamily or commercial asset.' },
