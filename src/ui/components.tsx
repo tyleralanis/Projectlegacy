@@ -4,6 +4,7 @@ import React from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ThemeBackdrop } from './ThemeAtmosphere';
 import { radius, spacing, useAppTheme } from './theme';
 
 import { getActiveEvent } from '@/engine/simulation';
@@ -34,6 +36,7 @@ export function AppScreen({ children, scroll = true }: { children: React.ReactNo
   );
   return (
     <SafeAreaView edges={['top']} style={[styles.screen, { backgroundColor: colors.canvas }]}>
+      <ThemeBackdrop />
       {content}
       {showFloatingBack ? (
         <Pressable
@@ -69,8 +72,9 @@ export function Eyebrow({ children, color }: { children: React.ReactNode; color?
 }
 
 export function Heading({ children, size = 'medium', style }: { children: React.ReactNode; size?: 'large' | 'medium' | 'small'; style?: StyleProp<ViewStyle> }) {
-  const { colors } = useAppTheme();
-  return <Text accessibilityRole="header" style={[styles.heading, size === 'large' && styles.headingLarge, size === 'small' && styles.headingSmall, { color: colors.text }, style as never]}>{children}</Text>;
+  const { colors, theme } = useAppTheme();
+  const editorialTheme = theme.id === 'cherry-blossom' || theme.id === 'midnight-luxe' || theme.id === 'forest-ledger';
+  return <Text accessibilityRole="header" style={[styles.heading, size === 'large' && styles.headingLarge, size === 'small' && styles.headingSmall, editorialTheme && Platform.OS !== 'android' ? styles.editorialHeading : null, { color: colors.text }, style as never]}>{children}</Text>;
 }
 
 export function Body({ children, secondary = false, style }: { children: React.ReactNode; secondary?: boolean; style?: StyleProp<ViewStyle> }) {
@@ -194,7 +198,7 @@ function TimeTray() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
+  screen: { flex: 1, overflow: 'hidden' },
   scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 132, gap: 16 },
   scrollContentWithBack: { paddingTop: 58 },
   floatingBack: { position: 'absolute', top: 7, left: 16, zIndex: 90, minHeight: 38, borderRadius: radius.pill, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 13, justifyContent: 'center', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 7 },
@@ -202,6 +206,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: radius.card, borderWidth: StyleSheet.hairlineWidth, padding: 16, gap: 12, shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
   eyebrow: { fontSize: 11, lineHeight: 15, fontWeight: '700', letterSpacing: 1.3 },
   heading: { fontSize: 22, lineHeight: 28, fontWeight: '700', letterSpacing: -0.35 },
+  editorialHeading: { fontFamily: 'Georgia', fontWeight: '600' },
   headingLarge: { fontSize: 34, lineHeight: 40, letterSpacing: -0.8 },
   headingSmall: { fontSize: 17, lineHeight: 22, letterSpacing: -0.15 },
   body: { fontSize: 15, lineHeight: 21 },
