@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -5,6 +6,7 @@ import { EngineActionButton } from '@/components/EngineActionButton';
 import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { playerAgeYears } from '@/engine/createWorld';
 import { relationshipPortrait } from '@/engine/immersionWorld';
+import { relationshipNeed } from '@/engine/relationshipDepth';
 import { useGame } from '@/state/GameProvider';
 import { AppScreen, Body, Card, Eyebrow, Heading, ProgressBar, SectionHeader, StatusPill } from '@/ui/components';
 import { radius, spacing, useAppTheme } from '@/ui/theme';
@@ -73,6 +75,7 @@ export default function PeopleScreen() {
         <View style={styles.section}>
           {shown.length === 0 ? <Card><Heading size="small">Nobody here yet</Heading><Body secondary>{age < 18 ? 'School, family, activities, and ordinary life will keep putting new people in your orbit.' : 'The world keeps generating people through school, work, wellness, organizations, family, and ordinary life.'}</Body></Card> : shown.map(({ relationship, person, kind }) => {
             const portrait = relationshipPortrait(world, person.id);
+            const need = relationshipNeed(world, person.id);
             return (
               <Card key={relationship.id}>
                 <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{person.firstName} {person.lastName}</Heading><Body secondary>{kind} · age {ageOf(world.calendar.week, person.birthWeek)} · {relationshipStatus(relationship.trust, relationship.affection, relationship.resentment)}</Body></View><StatusPill tone={person.isAlive ? 'success' : 'neutral'}>{person.isAlive ? 'Around' : 'Remembered'}</StatusPill></View>
@@ -80,6 +83,8 @@ export default function PeopleScreen() {
                 <Body>{portrait.summary}</Body>
                 <View style={styles.lifeBlock}><Eyebrow>THEIR LIFE RIGHT NOW</Eyebrow><Body secondary>{portrait.currentLife}</Body></View>
                 <View style={styles.traitWrap}>{portrait.traits.map((trait) => <StatusPill key={trait} tone="neutral">{trait}</StatusPill>)}</View>
+
+                <View style={[styles.need, { backgroundColor: colors.secondary }]}><View style={{ flex: 1, gap: 3 }}><Eyebrow>WHAT THIS RELATIONSHIP NEEDS</Eyebrow><Body>{need.title}</Body><Body secondary>{need.detail}</Body></View></View>
 
                 <View style={styles.metrics}>
                   <View style={styles.metric}><View style={styles.row}><Body>Trust</Body><Body secondary>{Math.round(relationship.trust)}</Body></View><ProgressBar value={relationship.trust} /></View>
@@ -92,14 +97,13 @@ export default function PeopleScreen() {
                   {portrait.recentSharedHistory.length === 0 ? <Body secondary>Nothing major is written into the relationship yet. Most of the story is still ordinary time together—or apart.</Body> : portrait.recentSharedHistory.slice(0, 3).map((memory, index) => <Body key={`${person.id}-memory-${index}`} secondary>• {memory}</Body>)}
                 </View>
 
-                {person.isAlive ? <View style={styles.actions}>
-                  <EngineActionButton title={age < 13 ? 'Talk' : 'Reach out'} action={{ verb: 'relationship.contact', targetIds: [person.id], parameters: {} }} style={{ flex: 1 }} />
-                  <EngineActionButton title="Spend time" action={{ verb: 'relationship.spend_time', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} />
-                  {age >= 14 ? <EngineActionButton title="Give $100" action={{ verb: 'relationship.transfer_cash', targetIds: [person.id], parameters: { amountCents: 10_000 } }} style={{ flex: 1 }} /> : null}
-                  {age >= 16 && !actor.partnerId && !person.partnerId && !['parent', 'child', 'sibling', 'relative'].includes(kind) ? <EngineActionButton title="Ask out" action={{ verb: 'relationship.date', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} /> : null}
-                  {age >= 18 && actor.partnerId === person.id && relationship.kind === 'partner' ? <EngineActionButton title="Propose" action={{ verb: 'relationship.propose', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} /> : null}
-                  {age >= 16 && actor.partnerId === person.id ? <EngineActionButton title="Separate" action={{ verb: 'relationship.separate', targetIds: [person.id], parameters: {}, destructive: true }} tone="danger" style={{ flex: 1 }} /> : null}
-                </View> : null}
+                {person.isAlive ? <>
+                  <Pressable onPress={() => router.push({ pathname: '/relationship', params: { personId: person.id } } as never)} style={({ pressed }) => [styles.focusButton, { backgroundColor: colors.accentSoft, borderColor: colors.accent, opacity: pressed ? 0.74 : 1 }]}><View style={{ flex: 1 }}><Heading size="small">Open the relationship</Heading><Body secondary>Spend time, repair conflict, make promises, support goals, handle money, family, romance, inheritance, and the story between you.</Body></View><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></Pressable>
+                  <View style={styles.actions}>
+                    <EngineActionButton title={age < 13 ? 'Talk' : 'Reach out'} action={{ verb: 'relationship.contact', targetIds: [person.id], parameters: {} }} style={{ flex: 1 }} />
+                    <EngineActionButton title="Spend time" action={{ verb: 'relationship.spend_time', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} />
+                  </View>
+                </> : null}
               </Card>
             );
           })}
@@ -138,6 +142,8 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   lifeBlock: { gap: 5, paddingTop: 2 },
   traitWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  need: { borderRadius: radius.md, padding: spacing.md, flexDirection: 'row' },
+  focusButton: { minHeight: 82, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, padding: 13, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   groupTile: { minHeight: 94, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, padding: 14, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   icon: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   iconText: { fontSize: 25 },

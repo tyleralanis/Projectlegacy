@@ -1,8 +1,10 @@
 import { applyAutonomousWorld } from './autonomousWorld';
+import { applyConsequenceWeb } from './consequenceWeb';
 import { allocateId } from './createWorld';
 import { recordHistory } from './history';
 import { applyImmersionWorld } from './immersionWorld';
 import { applyLivingWorldPass } from './livingWorld';
+import { executeRelationshipDepth } from './relationshipDepth';
 import type { ActionResult, Business, FocusArea, IntentAction, WorldState } from './types';
 
 import { WORLD_CONTENT } from '@/content/worldContent';
@@ -198,7 +200,38 @@ function hireCEO(source: WorldState, action: IntentAction): ActionResult {
   return ok(world, `${firstName} ${lastName} is now CEO of ${nextBusiness.name}. You keep ownership while giving up most of the weekly operating burden.`);
 }
 
+function propose(source: WorldState, action: IntentAction): ActionResult {
+  const actor = source.characters[source.playerCharacterId];
+  const target = source.characters[action.targetIds[0]];
+  const relationship = Object.values(source.relationships).find((item) => target && item.characterIds.includes(actor.id) && item.characterIds.includes(target.id));
+  if (!target?.isAlive || !relationship || relationship.kind !== 'partner' || actor.partnerId !== target.id || target.partnerId !== actor.id) return blocked(source, 'You need an active committed partner before proposing.');
+  if (relationship.affection < 55 || relationship.trust < 45) return blocked(source, 'The relationship needs more trust and affection before a proposal makes sense.');
+  const world = clone(source);
+  const nextActor = world.characters[actor.id];
+  const nextTarget = world.characters[target.id];
+  const nextRelationship = world.relationships[relationship.id];
+  const score = nextRelationship.affection * 0.42 + nextRelationship.trust * 0.33 + nextRelationship.respect * 0.15 - nextRelationship.resentment * 0.22 + nextTarget.empathy * 0.1;
+  const accepted = unit(`${world.metadata.worldSeed}:${world.calendar.week}:${target.id}:proposal`) * 100 + score >= 60;
+  nextRelationship.lastInteractionWeek = world.calendar.week;
+  if (!accepted) {
+    nextRelationship.resentment = Math.min(100, nextRelationship.resentment + 4);
+    nextActor.mood = Math.max(0, nextActor.mood - 6);
+    return ok(world, `${target.firstName} was not ready to accept the proposal. The relationship continues, but the moment is now part of its history.`);
+  }
+  nextRelationship.kind = 'spouse';
+  nextRelationship.affection = Math.min(100, nextRelationship.affection + 8);
+  nextRelationship.trust = Math.min(100, nextRelationship.trust + 5);
+  const id = allocateId(world, 'memory');
+  world.memories[id] = { id, participantIds: [nextActor.id, nextTarget.id], category: 'partnership', week: world.calendar.week, valence: 85, importance: 90, permanent: true, unresolved: false, visibility: 'shared', narrative: `${nextActor.firstName} and ${nextTarget.firstName} committed to a life together.` };
+  recordHistory(world, 'relationship', 'Engaged', `${nextTarget.firstName} accepted. The relationship is now tied more explicitly to family, money, time, housing, and succession.`, { important: true, subjectIds: [nextActor.id, nextTarget.id] });
+  return ok(world, `${nextTarget.firstName} accepted. You are now married in the relationship model, with the shared consequences that come with it.`);
+}
+
 export function executeSupplementalDepth(source: WorldState, action: IntentAction, confirmed = false): ActionResult | null {
+  const relationshipResult = executeRelationshipDepth(source, action, confirmed);
+  if (relationshipResult) return relationshipResult;
+  if (action.verb === 'relationship.propose') return propose(source, action);
+
   const actor = source.characters[source.playerCharacterId];
 
   if (action.verb === 'education.enroll') {
@@ -318,5 +351,6 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
 
   const lived = applyLivingWorldPass(before, world);
   const autonomous = applyAutonomousWorld(before, lived);
-  return applyImmersionWorld(before, autonomous);
+  const immersed = applyImmersionWorld(before, autonomous);
+  return applyConsequenceWeb(before, immersed);
 }
