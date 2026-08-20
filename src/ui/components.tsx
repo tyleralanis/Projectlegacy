@@ -19,7 +19,6 @@ import { radius, spacing, useAppTheme } from './theme';
 import { getActiveEvent } from '@/engine/simulation';
 import { useGame } from '@/state/GameProvider';
 
-
 export function AppScreen({ children, scroll = true }: { children: React.ReactNode; scroll?: boolean }) {
   const { colors } = useAppTheme();
   const content = scroll ? (
@@ -111,10 +110,15 @@ export function NoticeBanner() {
   const text = error ?? message;
   if (!text) return null;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${error ? 'Error' : 'Notice'}: ${text}. Tap to dismiss.`} onPress={clearNotice} style={[styles.notice, { backgroundColor: error ? colors.danger : colors.accent, shadowColor: colors.shadow }]}>
-      <Text style={styles.noticeText}>{text}</Text>
-      <Text style={styles.noticeDismiss}>Dismiss</Text>
-    </Pressable>
+    <SafeAreaView edges={['top']} pointerEvents="box-none" style={styles.noticeSafeArea}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${error ? 'Error' : 'Notice'}: ${text}. Tap to dismiss.`} onPress={clearNotice} style={[styles.notice, { backgroundColor: error ? colors.danger : colors.surface, borderColor: error ? colors.danger : colors.border, shadowColor: colors.shadow }]}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[styles.noticeTitle, { color: error ? '#FFFFFF' : colors.text }]}>{error ? 'Something needs attention' : 'Update'}</Text>
+          <Text numberOfLines={2} style={[styles.noticeText, { color: error ? '#FFFFFF' : colors.textSecondary }]}>{text}</Text>
+        </View>
+        <Text style={[styles.noticeDismiss, { color: error ? '#FFFFFF' : colors.accent }]}>Close</Text>
+      </Pressable>
+    </SafeAreaView>
   );
 }
 
@@ -145,7 +149,7 @@ function TimeTray() {
     <View style={[styles.timeTray, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.shadow }]}>
       <View style={styles.timeTrayHeader}>
         <Eyebrow>ADVANCE TIME</Eyebrow>
-        {activeEvent ? <StatusPill tone="warning">Decision waiting</StatusPill> : <StatusPill tone="neutral">Weekly engine</StatusPill>}
+        {activeEvent ? <StatusPill tone="warning">Decision waiting</StatusPill> : null}
       </View>
       <View style={styles.timeButtons}>
         {timeOptions.map((option) => (
@@ -186,9 +190,11 @@ const styles = StyleSheet.create({
   buttonText: { fontSize: 15, lineHeight: 20, fontWeight: '700' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24 },
   loadingMark: { width: 42, height: 42, borderRadius: 14, transform: [{ rotate: '45deg' }] },
-  notice: { marginHorizontal: 20, marginTop: 8, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 11, flexDirection: 'row', gap: 12, alignItems: 'center', shadowOpacity: 0.14, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
-  noticeText: { flex: 1, color: '#FFFFFF', fontSize: 13, lineHeight: 18, fontWeight: '600' },
-  noticeDismiss: { color: '#FFFFFF', fontSize: 11, fontWeight: '800', opacity: 0.85 },
+  noticeSafeArea: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, pointerEvents: 'box-none' },
+  notice: { marginHorizontal: 16, marginTop: 6, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', gap: 12, alignItems: 'center', shadowOpacity: 0.16, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
+  noticeTitle: { fontSize: 12, lineHeight: 16, fontWeight: '800' },
+  noticeText: { fontSize: 13, lineHeight: 18, fontWeight: '600' },
+  noticeDismiss: { fontSize: 11, fontWeight: '800' },
   timeTray: { position: 'absolute', left: 12, right: 12, bottom: 4, borderWidth: StyleSheet.hairlineWidth, borderRadius: 18, padding: 10, gap: 8, shadowOpacity: 0.14, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   timeTrayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
   timeButtons: { flexDirection: 'row', gap: 7 },
