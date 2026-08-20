@@ -1,3 +1,5 @@
+import { executeSecondarySchoolApplication } from './educationApplicationBridge';
+import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
 import {
   applySupplementalAdvance as applyBaseSupplementalAdvance,
   ceoCandidates,
@@ -6,7 +8,6 @@ import {
   hasGymMembership,
   normalizeSupplementalState,
 } from './supplementalDepth';
-import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
 import type { ActionResult, IntentAction, WorldState } from './types';
 
 export { ceoCandidates, getTuitionBalance, hasGymMembership, normalizeSupplementalState };
@@ -22,6 +23,8 @@ export function executeSupplementalDepth(
   action: IntentAction,
   confirmed = false,
 ): ActionResult | null {
+  const earlyApplication = executeSecondarySchoolApplication(source, action);
+  if (earlyApplication) return earlyApplication;
   const systemic = executeLifeSystemsDepth(source, action);
   if (systemic) return systemic;
   return executeBaseSupplementalDepth(source, action, confirmed);
