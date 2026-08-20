@@ -38,7 +38,7 @@ const catalogSource = fs.readFileSync(path.join(root, 'src', 'content', 'actionC
 const gameActionIds = [...catalogSource.matchAll(/\{ id: '([^']+)'/g)].map((match) => match[1]);
 const nativeActionIds = new Set(actionIds);
 
-// These actions were added as JS/TS-only gameplay in an OTA-compatible release. They are
+// These actions were added as JS/TS-only gameplay in OTA-compatible releases. They are
 // intentionally not added to the compiled Swift registry because doing so would require a
 // new App Store/TestFlight binary. Menus and the deterministic TypeScript interpreter can
 // still use them fully offline. A future native-AI binary may promote them into the registry.
@@ -49,6 +49,13 @@ const otaOnlyActions = new Set([
   'life.move_city', 'life.emigrate', 'organization.create',
   'politics.press_conference', 'politics.town_hall', 'politics.fundraiser', 'politics.constituent_work',
   'legal.hire_private_counsel',
+  'relationship.prioritize', 'relationship.deep_talk', 'relationship.check_in', 'relationship.apologize',
+  'relationship.forgive', 'relationship.celebrate', 'relationship.date_night', 'relationship.weekend_away',
+  'relationship.support_goal', 'relationship.ask_favor', 'relationship.lend_money', 'relationship.collect_loan',
+  'relationship.set_boundary', 'relationship.one_on_one', 'relationship.reminisce', 'relationship.plan_future',
+  'relationship.introduce_network',
+  'family.family_dinner', 'family.help_school', 'family.teach_money', 'family.attend_event', 'family.caregiving',
+  'family.set_expectations', 'family.invite_business', 'family.discuss_inheritance',
 ]);
 const unknownGameActions = gameActionIds.filter((id) => !nativeActionIds.has(id) && !otaOnlyActions.has(id));
 if (unknownGameActions.length > 0) throw new Error(`Game catalog actions are missing from the native registry or OTA allowlist: ${unknownGameActions.join(', ')}`);
@@ -57,6 +64,7 @@ const executorFiles = [
   path.join(root, 'src', 'engine', 'actions.ts'),
   path.join(root, 'src', 'engine', 'depthActions.ts'),
   path.join(root, 'src', 'engine', 'supplementalDepth.ts'),
+  path.join(root, 'src', 'engine', 'relationshipDepth.ts'),
   path.join(root, 'src', 'state', 'GameProvider.tsx'),
 ];
 const executorSource = executorFiles.filter(fs.existsSync).map((file) => fs.readFileSync(file, 'utf8')).join('\n');
