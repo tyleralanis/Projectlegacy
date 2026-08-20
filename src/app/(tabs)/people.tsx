@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EngineActionButton } from '@/components/EngineActionButton';
@@ -29,7 +29,7 @@ export default function PeopleScreen() {
   const [selected, setSelected] = useState<Group | null>(null);
   if (!world) return null;
   const actor = world.characters[world.playerCharacterId];
-  const relationships = useMemo(() => Object.values(world.relationships)
+  const relationships = Object.values(world.relationships)
     .filter((relationship) => relationship.characterIds.includes(actor.id))
     .map((relationship) => {
       const otherId = relationship.characterIds.find((id) => id !== actor.id)!;
@@ -44,7 +44,7 @@ export default function PeopleScreen() {
       else group = 'acquaintances';
       return { relationship, person, kind, group };
     })
-    .filter((item) => item.person), [actor.childIds, actor.id, actor.parentIds, world.characters, world.relationships]);
+    .filter((item) => item.person);
 
   if (selected) {
     const definition = groups.find((group) => group.id === selected)!;
