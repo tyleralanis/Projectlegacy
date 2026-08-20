@@ -1,4 +1,4 @@
-import { allocateId, playerAgeYears } from './createWorld';
+import { allocateId } from './createWorld';
 import { recordHistory } from './history';
 import { nextRandom } from './random';
 import type { ActionResult, IntentAction, MemoryRecord, WorldState } from './types';
@@ -51,11 +51,6 @@ function blocked(source: WorldState, message: string): ActionResult {
 function amount(action: IntentAction, fallback: number): number {
   const value = action.parameters.amountCents;
   return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.round(value)) : fallback;
-}
-
-function activeEducation(world: WorldState) {
-  const actor = world.characters[world.playerCharacterId];
-  return actionTargetEducation(world, actor.id, []);
 }
 
 function actionTargetEducation(world: WorldState, actorId: string, targetIds: string[]) {
@@ -129,7 +124,7 @@ export function executeTrackDepth(source: WorldState, action: IntentAction): Act
   }
 
   if (action.verb === 'markets.set_strategy') {
-    const strategy = typeof action.parameters.strategy === 'string' ? action.parameters.strategy : 'balanced';
+    const strategy = typeof action.parameters.strategy === 'string' ? action.parameters.strategy : 'index';
     const allowed = ['index', 'value', 'growth', 'income', 'concentrated', 'speculative'];
     if (!allowed.includes(strategy)) return blocked(source, 'Choose index, value, growth, income, concentrated, or speculative.');
     const world = clone(source);
@@ -186,6 +181,7 @@ export function executeTrackDepth(source: WorldState, action: IntentAction): Act
     if (business.cashCents < nextCost) return blocked(source, `${business.name} does not have enough company cash for that move.`);
     const world = clone(source);
     const next = world.businesses[business.id];
+    const nextActor = world.characters[world.playerCharacterId];
     next.cashCents -= nextCost;
     addTransaction(world, 'business-investment', -nextCost, `${action.verb} at ${next.name}`, next.organizationId);
 
@@ -208,7 +204,7 @@ export function executeTrackDepth(source: WorldState, action: IntentAction): Act
       const gain = clamp(2 + nextCost / Math.max(1, next.employees) / 120_000, 2, 10);
       next.reputation = clamp(next.reputation + gain);
       next.quality = clamp(next.quality + gain * 0.35);
-      actor.reputation.employee = clamp(actor.reputation.employee + gain * 0.45);
+      nextActor.reputation.employee = clamp(nextActor.reputation.employee + gain * 0.45);
       upsertTrackMemory(world, `Business · ${next.id} culture`, `${next.name} recently put real money behind employee rewards instead of treating culture as copy on a careers page.`, 48);
       return ok(world, `${next.name} rewarded the team. Employee reputation and execution quality improved, but payroll generosity still has to be funded.`);
     }
@@ -253,7 +249,7 @@ export function executeTrackDepth(source: WorldState, action: IntentAction): Act
       world.organizations[id] = { id, kind: 'club', name: label, resourcesCents: 50_000, influence: 22, stability: 68, memberIds: [nextActor.id], history: [`Joined by ${nextActor.firstName} ${nextActor.lastName} in week ${world.calendar.week}.`] };
       nextEducation.network = clamp(nextEducation.network + 5);
       nextActor.charisma = clamp(nextActor.charisma + 0.6);
-      recordHistory(world, 'education', `Joined ${label}`, `Campus life gained a recurring group with its own people and future networking value.`, { subjectIds: [id], importance: 2 });
+      recordHistory(world, 'education', `Joined ${label}`, 'Campus life gained a recurring group with its own people and future networking value.', { subjectIds: [id], importance: 2 });
       return ok(world, `You joined ${label}. The club is now a persistent organization in the world instead of a one-time social bonus.`);
     }
     if (action.verb === 'education.internship') {
@@ -265,7 +261,7 @@ export function executeTrackDepth(source: WorldState, action: IntentAction): Act
       world.careers[careerId] = { id: careerId, characterId: nextActor.id, employerId: 'organization-northstar-logistics', title: `${sector} intern`, sector, weeklySalaryCents: 42_000, performance: 48 + nextActor.discipline * 0.2, satisfaction: 64, weeksInRole: 0, active: true };
       nextEducation.network = clamp(nextEducation.network + 4);
       nextActor.reputation.professional = clamp(nextActor.reputation.professional + 3);
-      recordHistory(world, 'career', 'Started an internship', `School now overlaps with real work. The internship adds experience and network value while competing for the same limited week as classes and everything else.`, { importance: 3 });
+      recordHistory(world, 'career', 'Started an internship', 'School now overlaps with real work. The internship adds experience and network value while competing for the same limited week as classes and everything else.', { importance: 3 });
       return ok(world, `You started a ${sector.toLowerCase()} internship. It is real career experience now, not flavor text.`);
     }
     if (action.verb === 'education.sports_train') {
@@ -284,7 +280,7 @@ export function executeTrackDepth(source: WorldState, action: IntentAction): Act
       nextEducation.network = clamp(nextEducation.network + (resultRoll >= 70 ? 3 : 1));
       nextActor.fitness = clamp(nextActor.fitness + 1.1);
       nextActor.stress = clamp(nextActor.stress + 2);
-      recordHistory(world, 'education', `Competition: ${resultLabel}`, `Athletic results now become part of reputation and school history rather than only a fitness stat.`, { importance: resultRoll >= 88 ? 3 : 2 });
+      recordHistory(world, 'education', `Competition: ${resultLabel}`, 'Athletic results now become part of reputation and school history rather than only a fitness stat.', { importance: resultRoll >= 88 ? 3 : 2 });
       return ok(world, `You ${resultLabel}. Coaches, classmates, and future opportunities can now react to an actual athletic record.`);
     }
     if (action.verb === 'education.sports_seek_scholarship') {
