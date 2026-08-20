@@ -19,8 +19,8 @@ export interface TimeBudget {
   commitments: TimeCommitment[];
 }
 
-function clone(world: WorldState): WorldState {
-  return JSON.parse(JSON.stringify(world)) as WorldState;
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 function clamp(value: number, minimum = 0, maximum = 100): number {
@@ -41,15 +41,11 @@ function unit(input: string): number {
 }
 
 function chance(world: WorldState, key: string): number {
-  return unit(`${world.metadata.worldSeed}:${world.calendar.week}:${key}`);
+  return unit(`${world.metadata.worldSeed}:${key}`);
 }
 
 function ageAtWeek(character: Character, week: number): number {
   return Math.max(0, Math.floor((week - character.birthWeek) / 52));
-}
-
-function relationshipWith(world: WorldState, leftId: string, rightId: string): Relationship | undefined {
-  return Object.values(world.relationships).find((relationship) => relationship.characterIds.includes(leftId) && relationship.characterIds.includes(rightId));
 }
 
 function activeEducation(world: WorldState, actorId: string) {
@@ -60,13 +56,16 @@ function activeCareer(world: WorldState, actorId: string) {
   return Object.values(world.careers).find((career) => career.characterId === actorId && career.active);
 }
 
+function relationshipWith(world: WorldState, leftId: string, rightId: string): Relationship | undefined {
+  return Object.values(world.relationships).find((relationship) => relationship.characterIds.includes(leftId) && relationship.characterIds.includes(rightId));
+}
+
 export function getTimeBudget(world: WorldState): TimeBudget {
   const actor = world.characters[world.playerCharacterId];
   const age = playerAgeYears(world);
   const commitments: TimeCommitment[] = [];
   const education = activeEducation(world, actor.id);
   const career = activeCareer(world, actor.id);
-  const ownedBusinesses = Object.values(world.businesses).filter((business) => business.active && (business.ownerId ?? business.founderId) === actor.id && business.playerOwnershipBps > 0);
   const politics = world.politics[actor.id];
 
   if (education) {
@@ -75,7 +74,7 @@ export function getTimeBudget(world: WorldState): TimeBudget {
   }
   if (career) commitments.push({ id: `career:${career.id}`, label: career.title, hours: 40, detail: 'Your regular job and the energy around it.' });
 
-  for (const business of ownedBusinesses) {
+  for (const business of Object.values(world.businesses).filter((item) => item.active && (item.ownerId ?? item.founderId) === actor.id && item.playerOwnershipBps > 0)) {
     const hours = business.delegated ? Math.max(3, business.personalTimeHours ?? 5) : Math.max(24, business.personalTimeHours ?? 30);
     commitments.push({ id: `business:${business.id}`, label: business.name, hours, detail: business.delegated ? 'Ownership oversight with professional management.' : 'Owner-led operating time.' });
   }
@@ -84,10 +83,8 @@ export function getTimeBudget(world: WorldState): TimeBudget {
   else if (politics?.office) commitments.push({ id: 'office', label: politics.office, hours: politics.officeLevel === 'national' ? 34 : 16, detail: 'The actual job of governing.' });
 
   if (actor.partnerId && world.characters[actor.partnerId]?.isAlive) commitments.push({ id: 'partner', label: 'Partner / marriage', hours: 5, detail: 'A healthy relationship takes recurring attention.' });
-  if (actor.childIds.length > 0) {
-    const livingChildren = actor.childIds.filter((id) => world.characters[id]?.isAlive);
-    if (livingChildren.length > 0) commitments.push({ id: 'children', label: 'Parenting', hours: Math.min(20, 6 + livingChildren.length * 4), detail: 'Children create recurring time pressure even when nothing is wrong.' });
-  }
+  const livingChildren = actor.childIds.filter((id) => world.characters[id]?.isAlive);
+  if (livingChildren.length > 0) commitments.push({ id: 'children', label: 'Parenting', hours: Math.min(20, 6 + livingChildren.length * 4), detail: 'Children create recurring time pressure even when nothing is wrong.' });
 
   if (actor.focuses.includes('Sport')) commitments.push({ id: 'focus:sport', label: 'Sport', hours: 7, detail: 'Practice, games, recovery, and travel.' });
   if (actor.focuses.includes('Health')) commitments.push({ id: 'focus:health', label: 'Health', hours: 4, detail: 'Exercise and basic self-care.' });
@@ -95,22 +92,20 @@ export function getTimeBudget(world: WorldState): TimeBudget {
   if (actor.focuses.includes('Creative Work')) commitments.push({ id: 'focus:creative', label: 'Creative work', hours: 5, detail: 'Projects, hobbies, and deliberate practice.' });
 
   const capacityHours = age < 5 ? 42 : age < 13 ? 58 : age < 18 ? 64 : 72;
-  const committedHours = commitments.reduce((sum, commitment) => sum + commitment.hours, 0);
+  const committedHours = commitments.reduce((sum, item) => sum + item.hours, 0);
   const freeHours = Math.max(0, capacityHours - committedHours);
   const overloadHours = Math.max(0, committedHours - capacityHours);
-  const loadRatio = capacityHours > 0 ? committedHours / capacityHours : 0;
+  const loadRatio = committedHours / Math.max(1, capacityHours);
   const status = loadRatio > 1.32 ? 'unsustainable' : loadRatio > 1 ? 'overloaded' : loadRatio > 0.78 ? 'busy' : 'open';
-  return { capacityHours, committedHours, freeHours, overloadHours, loadRatio, status, commitments: commitments.sort((left, right) => right.hours - left.hours) };
+  return { capacityHours, committedHours, freeHours, overloadHours, loadRatio, status, commitments: commitments.sort((a, b) => b.hours - a.hours) };
 }
 
 function crossedAges(before: WorldState, after: WorldState): number[] {
   const beforeActor = before.characters[before.playerCharacterId];
   const afterActor = after.characters[after.playerCharacterId];
   if (!beforeActor || !afterActor || beforeActor.id !== afterActor.id) return [];
-  const start = ageAtWeek(beforeActor, before.calendar.week);
-  const end = ageAtWeek(afterActor, after.calendar.week);
   const values: number[] = [];
-  for (let age = start + 1; age <= end; age += 1) values.push(age);
+  for (let age = ageAtWeek(beforeActor, before.calendar.week) + 1; age <= ageAtWeek(afterActor, after.calendar.week); age += 1) values.push(age);
   return values;
 }
 
@@ -128,67 +123,57 @@ function milestoneCopy(age: number): { title: string; detail: string; important:
 
 function addPeer(world: WorldState, label: string): void {
   const actor = world.characters[world.playerCharacterId];
-  const existingPeer = Object.values(world.relationships).some((relationship) => {
+  const actorAge = playerAgeYears(world);
+  const peers = Object.values(world.relationships).filter((relationship) => {
     if (!relationship.characterIds.includes(actor.id) || !['friend', 'acquaintance'].includes(relationship.kind)) return false;
     const otherId = relationship.characterIds.find((id) => id !== actor.id)!;
     const other = world.characters[otherId];
-    return other?.isAlive && Math.abs(ageAtWeek(other, world.calendar.week) - playerAgeYears(world)) <= 2;
+    return Boolean(other?.isAlive && Math.abs(ageAtWeek(other, world.calendar.week) - actorAge) <= 2);
   });
-  if (existingPeer) return;
+  const targetCount = actorAge < 13 ? 1 : 2;
+  if (peers.length >= targetCount) return;
 
   const firstNames = ['Avery', 'Noah', 'Maya', 'Jordan', 'Eli', 'Sofia', 'Cameron', 'Nora', 'Sam', 'Quinn', 'Mina', 'Drew'];
   const lastNames = ['Brooks', 'Kim', 'Patel', 'Rivera', 'Bennett', 'Nguyen', 'Morgan', 'Price', 'Okafor', 'Vale'];
-  const key = `${world.metadata.worldSeed}:${world.calendar.week}:${label}`;
+  const key = `${world.metadata.worldSeed}:${world.calendar.week}:${label}:${peers.length}`;
   const firstName = firstNames[Math.floor(unit(`${key}:first`) * firstNames.length) % firstNames.length];
   const lastName = lastNames[Math.floor(unit(`${key}:last`) * lastNames.length) % lastNames.length];
-  const actorAge = playerAgeYears(world);
-  const ageOffset = Math.floor(unit(`${key}:age`) * 3) - 1;
-  const peerAge = Math.max(5, actorAge + ageOffset);
+  const peerAge = Math.max(5, actorAge + Math.floor(unit(`${key}:age`) * 3) - 1);
   const id = allocateId(world, 'character');
   world.characters[id] = {
-    id,
-    firstName,
-    lastName,
-    birthWeek: world.calendar.week - peerAge * 52,
-    isAlive: true,
-    cityId: actor.cityId,
-    householdId: `household-${id}`,
-    parentIds: [],
-    childIds: [],
-    cashCents: actorAge < 18 ? 0 : Math.round(50_000 + unit(`${key}:cash`) * 2_500_000),
-    health: 68 + unit(`${key}:health`) * 24,
-    mood: 55 + unit(`${key}:mood`) * 32,
-    stress: 10 + unit(`${key}:stress`) * 32,
-    discipline: 28 + unit(`${key}:discipline`) * 62,
-    ambition: 30 + unit(`${key}:ambition`) * 64,
-    empathy: 30 + unit(`${key}:empathy`) * 65,
-    riskTolerance: 20 + unit(`${key}:risk`) * 70,
-    ethics: 35 + unit(`${key}:ethics`) * 60,
+    id, firstName, lastName, birthWeek: world.calendar.week - peerAge * 52, isAlive: true, cityId: actor.cityId,
+    householdId: `household-${id}`, parentIds: [], childIds: [], cashCents: actorAge < 18 ? 0 : Math.round(50_000 + unit(`${key}:cash`) * 2_500_000),
+    health: 68 + unit(`${key}:health`) * 24, mood: 55 + unit(`${key}:mood`) * 32, stress: 10 + unit(`${key}:stress`) * 32,
+    discipline: 28 + unit(`${key}:discipline`) * 62, ambition: 30 + unit(`${key}:ambition`) * 64, empathy: 30 + unit(`${key}:empathy`) * 65,
+    riskTolerance: 20 + unit(`${key}:risk`) * 70, ethics: 35 + unit(`${key}:ethics`) * 60,
     knowledge: actorAge < 18 ? 10 + actorAge * 2.2 + unit(`${key}:knowledge`) * 20 : 35 + unit(`${key}:knowledge`) * 52,
-    charisma: 30 + unit(`${key}:charisma`) * 64,
-    fitness: 35 + unit(`${key}:fitness`) * 58,
+    charisma: 30 + unit(`${key}:charisma`) * 64, fitness: 35 + unit(`${key}:fitness`) * 58,
     focuses: actorAge < 18 ? ['Academics', 'Sport', 'Family'] : ['Job', 'Networking', 'Health'],
     reputation: { public: 48, business: 45, employee: 50, political: 35, professional: 45, family: 55, faction: 12 },
-    detailTier: 'standard',
-    lastMeaningfulWeek: world.calendar.week,
+    detailTier: 'standard', lastMeaningfulWeek: world.calendar.week,
   };
   const relationshipId = allocateId(world, 'relationship');
-  world.relationships[relationshipId] = {
-    id: relationshipId,
-    characterIds: [actor.id, id],
-    kind: 'friend',
-    trust: 44 + unit(`${key}:trust`) * 16,
-    affection: 48 + unit(`${key}:affection`) * 18,
-    respect: 42 + unit(`${key}:respect`) * 20,
-    resentment: 0,
-    lastInteractionWeek: world.calendar.week,
-  };
+  world.relationships[relationshipId] = { id: relationshipId, characterIds: [actor.id, id], kind: 'friend', trust: 44 + unit(`${key}:trust`) * 16, affection: 48 + unit(`${key}:affection`) * 18, respect: 42 + unit(`${key}:respect`) * 20, resentment: 0, lastInteractionWeek: world.calendar.week };
   recordHistory(world, 'relationship', `Met ${firstName} ${lastName}`, `${actor.firstName} and ${firstName} became friends ${label}.`, { subjectIds: [actor.id, id] });
+}
+
+function applyFamilyEconomy(world: WorldState, weeks: number): void {
+  const actor = world.characters[world.playerCharacterId];
+  if (playerAgeYears(world) >= 18) return;
+  for (const parentId of actor.parentIds) {
+    const parent = world.characters[parentId];
+    if (!parent?.isAlive) continue;
+    const weeklyEarning = 55_000 + Math.round((parent.knowledge + parent.discipline + parent.ambition) * 650);
+    const economicFactor = 0.78 + Math.max(-0.25, world.economy.growth * 5) - world.economy.unemployment * 0.45;
+    const weeklyHouseholdShare = 78_000 + actor.parentIds.length * 11_000;
+    parent.cashCents += Math.round((weeklyEarning * economicFactor - weeklyHouseholdShare) * weeks);
+  }
 }
 
 function applyGrowingUp(before: WorldState, world: WorldState, weeks: number): void {
   const actor = world.characters[world.playerCharacterId];
   const age = playerAgeYears(world);
+  applyFamilyEconomy(world, weeks);
   const parentRelationships = actor.parentIds.map((id) => relationshipWith(world, actor.id, id)).filter(Boolean) as Relationship[];
   const parentCash = actor.parentIds.reduce((sum, id) => sum + Math.max(0, world.characters[id]?.cashCents ?? 0), 0);
 
@@ -237,14 +222,12 @@ function applyTimePressure(world: WorldState, weeks: number): void {
   actor.stress = clamp(actor.stress + stressHit);
   actor.mood = clamp(actor.mood - Math.min(10, stressHit * 0.42));
   if (budget.status === 'unsustainable') actor.health = clamp(actor.health - Math.min(8, weeks * excess * 0.09));
-
   const career = activeCareer(world, actor.id);
   if (career) career.performance = clamp(career.performance - Math.min(9, weeks * excess * 0.08));
   const education = activeEducation(world, actor.id);
   if (education) education.recordedGrade = clamp(education.recordedGrade - Math.min(7, weeks * excess * 0.065));
 
-  const protectedFamily = actor.focuses.includes('Family') || actor.focuses.includes('Partner');
-  if (!protectedFamily) {
+  if (!actor.focuses.includes('Family') && !actor.focuses.includes('Partner')) {
     for (const relationship of Object.values(world.relationships)) {
       if (!relationship.characterIds.includes(actor.id) || !['parent', 'child', 'sibling', 'partner', 'spouse', 'friend'].includes(relationship.kind)) continue;
       relationship.affection = clamp(relationship.affection - Math.min(5, weeks * excess * 0.035));
@@ -259,95 +242,69 @@ function applyTimePressure(world: WorldState, weeks: number): void {
   }
 }
 
-function applyCareerTexture(world: WorldState, weeks: number): void {
+function applyCareerTexture(before: WorldState, world: WorldState): void {
   const actor = world.characters[world.playerCharacterId];
   const career = activeCareer(world, actor.id);
-  if (!career || weeks <= 0) return;
-  const quarterBoundaries = Math.floor(world.calendar.week / 13) - Math.floor((world.calendar.week - weeks) / 13);
-  if (quarterBoundaries <= 0) return;
-
-  const recessionRisk = world.economy.regime === 'recession' ? 0.18 : world.economy.regime === 'slow' ? 0.07 : 0.015;
-  const performanceRisk = career.performance < 45 ? 0.2 : career.performance < 58 ? 0.08 : 0;
-  if (chance(world, `career-shock:${career.id}`) < Math.min(0.55, recessionRisk + performanceRisk)) {
-    career.active = false;
-    actor.stress = clamp(actor.stress + 9);
-    actor.mood = clamp(actor.mood - 6);
-    recordHistory(world, 'career', 'The job disappeared', `${career.title} ended in a ${world.economy.regime} economy. Performance, labor conditions, and bad timing all mattered. Your experience remains on the resume.`, { important: true, subjectIds: [actor.id, career.employerId] });
-    return;
-  }
-
-  if (career.performance >= 76 && actor.focuses.includes('Networking') && chance(world, `recruiter:${career.id}`) < 0.22) {
-    actor.reputation.professional = clamp(actor.reputation.professional + 2.5);
-    recordHistory(world, 'career', 'A recruiter starts circling', `Someone in your industry noticed the work. Nothing is guaranteed, but your name is traveling farther than your current job title.`, { subjectIds: [actor.id] });
+  if (!career) return;
+  const startQuarter = Math.floor(before.calendar.week / 13);
+  const endQuarter = Math.floor(world.calendar.week / 13);
+  for (let quarter = startQuarter + 1; quarter <= endQuarter; quarter += 1) {
+    const recessionRisk = world.economy.regime === 'recession' ? 0.18 : world.economy.regime === 'slow' ? 0.07 : 0.015;
+    const performanceRisk = career.performance < 45 ? 0.2 : career.performance < 58 ? 0.08 : 0;
+    if (chance(world, `career-shock:${career.id}:${quarter}`) < Math.min(0.55, recessionRisk + performanceRisk)) {
+      career.active = false;
+      actor.stress = clamp(actor.stress + 9);
+      actor.mood = clamp(actor.mood - 6);
+      recordHistory(world, 'career', 'The job disappeared', `${career.title} ended in a ${world.economy.regime} economy. Performance, labor conditions, and bad timing all mattered. Your experience remains on the resume.`, { important: true, subjectIds: [actor.id, career.employerId] });
+      return;
+    }
+    if (career.performance >= 76 && actor.focuses.includes('Networking') && chance(world, `recruiter:${career.id}:${quarter}`) < 0.22) {
+      actor.reputation.professional = clamp(actor.reputation.professional + 2.5);
+      recordHistory(world, 'career', 'A recruiter starts circling', 'Someone in your industry noticed the work. Nothing is guaranteed, but your name is traveling farther than your current job title.', { subjectIds: [actor.id] });
+    }
   }
 }
 
-function applyWorldNews(world: WorldState, weeks: number): void {
-  const quarterBoundaries = Math.floor(world.calendar.week / 13) - Math.floor((world.calendar.week - weeks) / 13);
-  if (quarterBoundaries <= 0) return;
-  const recentlyLogged = world.timeline.some((entry) => entry.category === 'world' && world.calendar.week - entry.week < 10);
-  if (recentlyLogged) return;
+function applyWorldNews(before: WorldState, world: WorldState): void {
+  if (Math.floor(world.calendar.week / 13) <= Math.floor(before.calendar.week / 13)) return;
   const economy = world.economy;
   const variants = economy.regime === 'recession'
-    ? [
-        'Hiring freezes are spreading. People who felt secure six months ago are suddenly updating resumes.',
-        'Credit is tighter and buyers are getting pickier. Weak businesses are discovering how short a runway can feel.',
-        'The local mood has turned defensive: fewer big purchases, more nervous employers, and a lot more “wait and see.”',
-      ]
+    ? ['Hiring freezes are spreading. People who felt secure six months ago are suddenly updating resumes.', 'Credit is tighter and buyers are getting pickier. Weak businesses are discovering how short a runway can feel.', 'The local mood has turned defensive: fewer big purchases, more nervous employers, and a lot more “wait and see.”']
     : economy.regime === 'boom'
-      ? [
-          'Everybody suddenly knows somebody who is hiring. Wages, rents, and confidence are all trying to outrun each other.',
-          'Money is moving quickly. Good businesses are expanding and mediocre ones are briefly convinced they are good businesses.',
-          'The city feels flush. That is great for opportunity and less great for anyone trying to buy a house cheaply.',
-        ]
+      ? ['Everybody suddenly knows somebody who is hiring. Wages, rents, and confidence are all trying to outrun each other.', 'Money is moving quickly. Good businesses are expanding and mediocre ones are briefly convinced they are good businesses.', 'The city feels flush. That is great for opportunity and less great for anyone trying to buy a house cheaply.']
       : economy.regime === 'growth'
-        ? [
-            'Employers are competing a little harder for good people, while housing quietly keeps getting more expensive.',
-            'Business is healthy enough that expansion plans are coming back out of drawers.',
-            'The economy is moving forward, unevenly but noticeably. Opportunity is easier to find than certainty.',
-          ]
-        : [
-            'The economy is mostly behaving itself, which is usually when people start assuming it always will.',
-            'Hiring, housing, and markets are moving without much drama. Small differences in skill and timing matter more in quiet periods.',
-            'Nothing is booming and nothing is collapsing. Ordinary decisions are doing most of the compounding.',
-          ];
-  const detail = variants[Math.floor(chance(world, 'world-news') * variants.length) % variants.length];
-  recordHistory(world, 'world', 'Around town', detail, { important: economy.regime === 'recession' });
+        ? ['Employers are competing a little harder for good people, while housing quietly keeps getting more expensive.', 'Business is healthy enough that expansion plans are coming back out of drawers.', 'The economy is moving forward, unevenly but noticeably. Opportunity is easier to find than certainty.']
+        : ['The economy is mostly behaving itself, which is usually when people start assuming it always will.', 'Hiring, housing, and markets are moving without much drama. Small differences in skill and timing matter more in quiet periods.', 'Nothing is booming and nothing is collapsing. Ordinary decisions are doing most of the compounding.'];
+  const detail = variants[Math.floor(chance(world, `world-news:${Math.floor(world.calendar.week / 13)}`) * variants.length) % variants.length];
+  recordHistory(world, 'life', 'Around town', detail, { important: economy.regime === 'recession' });
 }
 
-function maybeCreateRelationshipReachOut(world: WorldState): void {
+function maybeCreateRelationshipReachOut(world: WorldState, interactive: boolean): void {
   if (world.events.some((event) => !event.resolved)) return;
   const actor = world.characters[world.playerCharacterId];
   const candidates = Object.values(world.relationships)
-    .filter((relationship) => relationship.characterIds.includes(actor.id) && ['parent', 'sibling', 'friend', 'partner', 'spouse'].includes(relationship.kind))
-    .map((relationship) => {
-      const otherId = relationship.characterIds.find((id) => id !== actor.id)!;
-      return { relationship, other: world.characters[otherId] };
-    })
+    .filter((relationship) => relationship.characterIds.includes(actor.id) && ['parent', 'child', 'sibling', 'friend', 'partner', 'spouse'].includes(relationship.kind))
+    .map((relationship) => ({ relationship, other: world.characters[relationship.characterIds.find((id) => id !== actor.id)!] }))
     .filter((item) => item.other?.isAlive && world.calendar.week - item.relationship.lastInteractionWeek >= 20)
-    .sort((left, right) => (world.calendar.week - right.relationship.lastInteractionWeek) - (world.calendar.week - left.relationship.lastInteractionWeek));
-  if (candidates.length === 0 || chance(world, 'relationship-reach-out') > 0.34) return;
+    .sort((a, b) => (world.calendar.week - b.relationship.lastInteractionWeek) - (world.calendar.week - a.relationship.lastInteractionWeek));
+  if (candidates.length === 0 || chance(world, `relationship-reach-out:${Math.floor(world.calendar.week / 4)}`) > 0.34) return;
 
   const selected = candidates[0];
-  const id = allocateId(world, 'event');
-  const family = ['parent', 'sibling'].includes(selected.relationship.kind);
+  const family = ['parent', 'child', 'sibling'].includes(selected.relationship.kind);
+  if (!interactive) {
+    selected.relationship.lastInteractionWeek = world.calendar.week;
+    selected.relationship.affection = clamp(selected.relationship.affection + (actor.focuses.includes('Family') ? 2 : -2));
+    recordHistory(world, 'relationship', `${selected.other.firstName} checked in`, actor.focuses.includes('Family') ? 'Even while life moved quickly, the relationship got some attention.' : 'The message landed during a busy stretch and the conversation never quite happened.', { subjectIds: [actor.id, selected.other.id] });
+    return;
+  }
+
   world.events.push({
-    id,
-    templateId: 'relationship.reconnect',
-    domain: 'relationship',
-    severity: 'S2',
-    week: world.calendar.week,
+    id: allocateId(world, 'event'), templateId: 'relationship.reconnect', domain: 'relationship', severity: 'S2', week: world.calendar.week,
     title: family ? `${selected.other.firstName} is checking whether you're still alive` : `${selected.other.firstName} reaches out`,
-    narrative: family
-      ? `It has been a while. ${selected.other.firstName} wants actual time, not another “we should catch up soon.”`
-      : `${selected.other.firstName} noticed the distance too. There is still enough history here to do something with it.`,
+    narrative: family ? `It has been a while. ${selected.other.firstName} wants actual time, not another “we should catch up soon.”` : `${selected.other.firstName} noticed the distance too. There is still enough history here to do something with it.`,
     participantIds: [actor.id, selected.other.id],
-    choices: [
-      { id: 'make-time', label: 'Make time', detail: 'Put something else down and show up for the relationship.' },
-      { id: 'keep-distance', label: 'Keep some distance', detail: 'Protect your time. The relationship may cool further.' },
-    ],
-    otherActionFamilies: ['relationship'],
-    resolved: false,
+    choices: [{ id: 'make-time', label: 'Make time', detail: 'Put something else down and show up for the relationship.' }, { id: 'keep-distance', label: 'Keep some distance', detail: 'Protect your time. The relationship may cool further.' }],
+    otherActionFamilies: ['relationship'], resolved: false,
   });
 }
 
@@ -360,10 +317,8 @@ export function applyLivingWorldPass(before: WorldState, source: WorldState): Wo
 
   applyGrowingUp(before, world, weeks);
   applyTimePressure(world, weeks);
-  applyCareerTexture(world, weeks);
-  applyWorldNews(world, weeks);
-
-  const relationshipWindows = Math.floor(world.calendar.week / 4) - Math.floor(before.calendar.week / 4);
-  if (relationshipWindows > 0) maybeCreateRelationshipReachOut(world);
+  applyCareerTexture(before, world);
+  applyWorldNews(before, world);
+  if (Math.floor(world.calendar.week / 4) > Math.floor(before.calendar.week / 4)) maybeCreateRelationshipReachOut(world, weeks <= 4);
   return world;
 }
