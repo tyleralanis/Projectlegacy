@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   buttonText: { fontSize: 15, lineHeight: 20, fontWeight: '700' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24 },
   loadingMark: { width: 42, height: 42, borderRadius: 14, transform: [{ rotate: '45deg' }] },
-  noticeSafeArea: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, pointerEvents: 'box-none' },
+  noticeSafeArea: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100 },
   notice: { marginHorizontal: 16, marginTop: 6, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', gap: 12, alignItems: 'center', shadowOpacity: 0.16, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
   noticeTitle: { fontSize: 12, lineHeight: 16, fontWeight: '800' },
   noticeText: { fontSize: 13, lineHeight: 18, fontWeight: '600' },
