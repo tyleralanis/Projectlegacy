@@ -23,21 +23,21 @@ export default function EventScreen() {
   };
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.canvas }]}>
-      <View style={styles.topBar}><PrimaryButton title="Back" tone="neutral" onPress={() => router.back()} /><StatusPill tone={event.severity === 'S4' ? 'danger' : 'warning'}>{event.severity} · {event.domain}</StatusPill></View>
+      <View style={styles.topBar}><PrimaryButton title="Back" tone="neutral" onPress={() => router.back()} /><StatusPill tone={event.severity === 'S4' ? 'danger' : 'warning'}>{event.severity === 'S4' ? 'Big decision' : 'Needs you'}</StatusPill></View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={{ gap: 7 }}><Eyebrow>WEEK {event.week} · MAJOR EVENT</Eyebrow><Heading size="large">{event.title}</Heading><Body>{event.narrative}</Body></View>
+        <View style={{ gap: 7 }}><Eyebrow>{event.domain.toUpperCase()} · THIS CHANGES THINGS</Eyebrow><Heading size="large">{event.title}</Heading><Body>{event.narrative}</Body></View>
         <WhyCard explanation={event.explanation} />
         <View style={styles.choices}>
           {event.choices.map((choice) => (
             <Card key={choice.id}>
               <Heading size="small">{choice.label}</Heading>
               <Body secondary>{choice.detail}</Body>
-              <PrimaryButton title="Choose" tone={choice.tone === 'danger' ? 'danger' : 'accent'} disabled={busy} onPress={() => { void choose(choice.id); }} />
+              <PrimaryButton title="Do it" tone={choice.tone === 'danger' ? 'danger' : 'accent'} disabled={busy} onPress={() => { void choose(choice.id); }} />
             </Card>
           ))}
         </View>
-        {event.otherActionFamilies.length > 0 ? <OtherActionComposer domains={[event.domain]} placeholder="Try another contextually plausible response…" /> : null}
-        <Body secondary>Facts and consequences are resolved by the deterministic engine. Local AI can only propose a supported action.</Body>
+        {event.otherActionFamilies.length > 0 ? <OtherActionComposer domains={[event.domain]} placeholder="Try something else…" /> : null}
+        <Body secondary>The world can still say no. Money, skills, relationships, timing, and past choices all get a vote.</Body>
       </ScrollView>
     </SafeAreaView>
   );
