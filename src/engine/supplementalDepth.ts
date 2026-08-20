@@ -1,3 +1,4 @@
+import { applyAutonomousWorld } from './autonomousWorld';
 import { allocateId } from './createWorld';
 import { recordHistory } from './history';
 import { applyLivingWorldPass } from './livingWorld';
@@ -314,5 +315,6 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
     if (world.calendar.week - started >= duration) organization.history.splice(markerIndex, 1);
   }
 
-  return applyLivingWorldPass(before, world);
+  const lived = applyLivingWorldPass(before, world);
+  return applyAutonomousWorld(before, lived);
 }

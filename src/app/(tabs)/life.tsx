@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MenuTile } from '@/components/MenuTile';
 import { WhyCard } from '@/components/WhyCard';
 import { WORLD_CONTENT } from '@/content/worldContent';
+import { getOpenStoryThreads } from '@/engine/autonomousWorld';
 import { playerAgeYears } from '@/engine/createWorld';
 import { getTimeBudget } from '@/engine/livingWorld';
 import { formatMoney, netWorthCents } from '@/engine/money';
@@ -34,6 +35,16 @@ function weekStatus(status: ReturnType<typeof getTimeBudget>['status']): { label
   return { label: 'Room to breathe', tone: 'success', copy: 'There is enough unclaimed time for people, opportunities, and the occasional bad idea.' };
 }
 
+function storyTitle(category: string): string {
+  const label = category.replace('Thread · ', '');
+  if (label === 'Relationship') return 'Someone is feeling the distance';
+  if (label === 'Time pressure') return 'The schedule itself is becoming a problem';
+  if (label === 'Career') return 'Work is turning into a story';
+  if (label === 'Business') return 'A company problem is sticking around';
+  if (label === 'Family money') return 'Money is getting personal';
+  return 'This is still unfolding';
+}
+
 export default function LifeScreen() {
   const { world, lastSummary, setFocus } = useGame();
   const { colors } = useAppTheme();
@@ -45,6 +56,7 @@ export default function LifeScreen() {
   const country = WORLD_CONTENT.countries.find((item) => item.id === world.activeCountryId);
   const timeBudget = getTimeBudget(world);
   const timeState = weekStatus(timeBudget.status);
+  const openStories = getOpenStoryThreads(world);
   const toggleFocus = (focus: FocusArea) => {
     const current = actor.focuses;
     const next = current.includes(focus) ? current.filter((item) => item !== focus) : [...current, focus].slice(-3);
@@ -90,6 +102,19 @@ export default function LifeScreen() {
           </Card>
         </Pressable>
       ) : <Card accent><Eyebrow>NOTHING ON FIRE</Eyebrow><Heading size="small">The week is yours</Heading><Body secondary>Your priorities handle the ordinary stuff. The world handles making sure ordinary does not last forever.</Body></Card>}
+
+      {openStories.length > 0 ? <View style={styles.section}>
+        <SectionHeader title="Ongoing stories" action={<StatusPill tone="warning">{openStories.length} open</StatusPill>} />
+        {openStories.slice(0, 4).map((memory) => {
+          const label = memory.category.replace('Thread · ', '');
+          const people = memory.participantIds.filter((id) => id !== actor.id).map((id) => world.characters[id]?.firstName).filter(Boolean).slice(0, 2).join(' & ');
+          return <Card key={memory.id}>
+            <View style={styles.eventHeader}><View style={{ flex: 1, gap: 4 }}><Eyebrow>{label.toUpperCase()}{people ? ` · ${people.toUpperCase()}` : ''}</Eyebrow><Heading size="small">{storyTitle(memory.category)}</Heading></View><StatusPill tone={memory.importance >= 82 ? 'danger' : memory.importance >= 65 ? 'warning' : 'accent'}>{memory.importance >= 82 ? 'Hot' : 'Building'}</StatusPill></View>
+            <Body secondary>{memory.narrative}</Body>
+          </Card>;
+        })}
+        <Body secondary>These do not disappear because a popup closed. They stay open until the underlying situation actually changes.</Body>
+      </View> : null}
 
       <View style={styles.section}>
         <SectionHeader title={age < 18 ? 'Life right now' : 'Do something'} />
