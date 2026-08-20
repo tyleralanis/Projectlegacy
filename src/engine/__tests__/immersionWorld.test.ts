@@ -56,11 +56,12 @@ describe('deep immersion layer', () => {
 
   it('turns people into readable lives instead of relationship meters only', () => {
     const world = createWorld({ seed: 'portrait', startAgeYears: 18, nowISO: '2026-01-01T00:00:00.000Z' });
-    const portrait = relationshipPortrait(world, 'character-elena');
+    const parent = world.characters['character-elena'];
+    const portrait = relationshipPortrait(world, parent.id);
 
     expect(portrait.summary.length).toBeGreaterThan(25);
     expect(portrait.traits.length).toBe(4);
-    expect(portrait.currentLife).toContain('Elena');
+    expect(portrait.currentLife).toContain(parent.firstName);
   });
 
   it('builds a state-grounded life snapshot', () => {
