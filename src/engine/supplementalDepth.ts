@@ -1,5 +1,6 @@
-import { allocateId, playerAgeYears } from './createWorld';
+import { allocateId } from './createWorld';
 import { recordHistory } from './history';
+import { applyLivingWorldPass } from './livingWorld';
 import type { ActionResult, Business, FocusArea, IntentAction, WorldState } from './types';
 
 import { WORLD_CONTENT } from '@/content/worldContent';
@@ -313,5 +314,5 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
     if (world.calendar.week - started >= duration) organization.history.splice(markerIndex, 1);
   }
 
-  return world;
+  return applyLivingWorldPass(before, world);
 }
