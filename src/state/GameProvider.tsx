@@ -186,6 +186,60 @@ export function GameProvider({ children }: React.PropsWithChildren) {
 
   const performAction = useCallback(async (action: IntentAction, confirmed = false) => {
     if (!world) return { completed: false, message: 'The world is not ready.', requiresConfirmation: false };
+
+    if (action.verb === 'organization.create') {
+      const actor = world.characters[world.playerCharacterId];
+      const age = Math.max(0, Math.floor((world.calendar.week - actor.birthWeek) / 52));
+      if (age < 14) return { completed: false, message: 'You are not old enough to start an independent organization yet.', requiresConfirmation: false };
+
+      const requestedCapital = typeof action.parameters.amountCents === 'number'
+        ? Math.max(0, Math.round(action.parameters.amountCents))
+        : Math.min(actor.cashCents, 100_000);
+      if (requestedCapital > actor.cashCents) return { completed: false, message: 'You do not have enough liquid cash to fund that organization.', requiresConfirmation: false };
+
+      const next = JSON.parse(JSON.stringify(world)) as WorldState;
+      const nextActor = next.characters[next.playerCharacterId];
+      const organizationId = allocateId(next, 'organization');
+      const requestedKind = action.parameters.kind;
+      const validKinds = ['club', 'charity', 'party', 'professional', 'faction', 'security', 'other'] as const;
+      const kind = typeof requestedKind === 'string' && (validKinds as readonly string[]).includes(requestedKind)
+        ? requestedKind as (typeof validKinds)[number]
+        : 'other';
+      const requestedName = action.parameters.name;
+      const name = typeof requestedName === 'string' && requestedName.trim()
+        ? requestedName.trim().slice(0, 60)
+        : `${nextActor.lastName} Group`;
+
+      nextActor.cashCents -= requestedCapital;
+      next.organizations[organizationId] = {
+        id: organizationId,
+        kind,
+        name,
+        resourcesCents: requestedCapital,
+        influence: 8,
+        stability: 45,
+        memberIds: [nextActor.id],
+        leaderId: nextActor.id,
+        history: [`Founded by ${nextActor.firstName} ${nextActor.lastName} in week ${next.calendar.week}.`],
+      };
+      next.transactions.push({
+        id: allocateId(next, 'transaction'),
+        week: next.calendar.week,
+        kind: 'organization-funding',
+        amountCents: -requestedCapital,
+        fromId: nextActor.id,
+        toId: organizationId,
+        memo: `Founded ${name}`,
+      });
+      const resultMessage = `${name} is now part of the world.`;
+      await runBusy(async () => {
+        await persist(next);
+        setMessage(resultMessage);
+        if (world.settings.hapticsEnabled) await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      });
+      return { completed: true, message: resultMessage, requiresConfirmation: false };
+    }
+
     const result = executeAction(world, action, confirmed);
     if (result.validation.requiresConfirmation && !confirmed) return { completed: false, message: result.message, requiresConfirmation: true, explanation: result.explanation };
     if (!result.validation.valid) return { completed: false, message: result.message, requiresConfirmation: false, explanation: result.explanation };
