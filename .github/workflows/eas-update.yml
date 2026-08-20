@@ -35,4 +35,4 @@ jobs:
       - name: Publish compatible OTA update
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: pnpm dlx eas-cli@22.0.0 update --channel "${{ inputs.channel }}" --message "${{ inputs.message }}" --non-interactive
+        run: pnpm dlx eas-cli@22.0.0 update --channel "${{ inputs.channel }}" --environment "${{ inputs.channel }}" --message "${{ inputs.message }}" --non-interactive
