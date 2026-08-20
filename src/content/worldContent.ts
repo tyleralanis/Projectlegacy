@@ -1,5 +1,6 @@
 import assets from './catalogs/assets.json';
 import businessSectors from './catalogs/business-sectors.json';
+import cities from './catalogs/cities.json';
 import countries from './catalogs/countries.json';
 import eventTemplates from './catalogs/events.json';
 import laws from './catalogs/laws.json';
@@ -10,6 +11,7 @@ import universities from './catalogs/universities.json';
 export const WORLD_CONTENT = {
   assets,
   businessSectors,
+  cities,
   countries,
   eventTemplates,
   laws,
