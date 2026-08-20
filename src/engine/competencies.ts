@@ -43,10 +43,10 @@ function baseProfile(character: Character): Record<CompetencyKey, number> {
     negotiation: clamp(character.charisma * 0.34 + character.empathy * 0.23 + character.knowledge * 0.18 + character.riskTolerance * 0.13 + character.ethics * 0.12),
     technology: clamp(character.knowledge * 0.6 + character.discipline * 0.25 + character.ambition * 0.15),
     trades: clamp(character.discipline * 0.36 + character.knowledge * 0.28 + character.fitness * 0.2 + character.riskTolerance * 0.16),
-    law: clamp(character.knowledge * 0.6 + character.discipline * 0.2 + character.communication * 0 + character.charisma * 0.08 + character.ethics * 0.12),
+    law: clamp(character.knowledge * 0.6 + character.discipline * 0.2 + character.charisma * 0.08 + character.ethics * 0.12),
     medicine: clamp(character.knowledge * 0.58 + character.discipline * 0.22 + character.empathy * 0.2),
     athletics: clamp(character.fitness * 0.62 + character.discipline * 0.22 + character.riskTolerance * 0.16),
-    media: clamp(character.charisma * 0.46 + character.communication * 0 + character.empathy * 0.18 + character.ambition * 0.18 + character.knowledge * 0.18),
+    media: clamp(character.charisma * 0.46 + character.empathy * 0.18 + character.ambition * 0.18 + character.knowledge * 0.18),
     politics: clamp(character.charisma * 0.3 + character.empathy * 0.2 + character.knowledge * 0.22 + character.ambition * 0.16 + character.ethics * 0.12),
     parenting: clamp(character.empathy * 0.42 + character.discipline * 0.22 + character.ethics * 0.2 + character.knowledge * 0.08 + character.charisma * 0.08),
   };
