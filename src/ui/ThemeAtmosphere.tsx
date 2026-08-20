@@ -173,7 +173,7 @@ function SoftGlow({ width, height }: { width: number; height: number }) {
 }
 
 const styles = StyleSheet.create({
-  ambientLayer: { ...StyleSheet.absoluteFillObject, zIndex: 80, overflow: 'hidden' },
+  ambientLayer: { ...StyleSheet.absoluteFill, zIndex: 80, overflow: 'hidden' },
   petal: { position: 'absolute', top: -30, width: 11, height: 18, borderRadius: 10 },
   shootingStar: { position: 'absolute', top: 0, left: -110, width: 105, height: 2, borderRadius: 2, shadowOpacity: 0.5, shadowRadius: 8 },
   wildlife: { position: 'absolute', left: 0 },
