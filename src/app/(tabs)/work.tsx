@@ -31,9 +31,9 @@ export default function WorkScreen() {
 
       {career ? <Card accent><Heading size="small">Right now</Heading><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg }}><Stat label="Job" value={career.title} /><Stat label="Weekly pay" value={formatMoney(career.weeklySalaryCents)} /><Stat label="Performance" value={Math.round(career.performance).toString()} /></View></Card> : null}
 
-      {age < 5 ? <Card accent><Heading size="small">No résumé required</Heading><Body secondary>For a while, becoming a person is the whole job. Family, health, curiosity, and the world around you are already shaping what comes next.</Body><StatusPill tone="accent">Age {age}</StatusPill></Card> : age < 14 ? <Card accent><Heading size="small">The stakes are small. The compounding isn't.</Heading><Body secondary>Grades do not decide your life, but habits, skills, friendships, confidence, and opportunities can start building years before adulthood.</Body><StatusPill tone="accent">Age {age}</StatusPill></Card> : null}
+      {age < 5 ? <Card accent><Heading size="small">No résumé required</Heading><Body secondary>For a while, becoming a person is the whole job. Family, health, curiosity, and the world around you are already shaping what comes next.</Body><StatusPill tone="accent">Age {age}</StatusPill></Card> : age < 14 ? <Card accent><Heading size="small">The stakes are small. The compounding is not.</Heading><Body secondary>Grades do not decide your life, but habits, skills, friendships, confidence, and opportunities can start building years before adulthood.</Body><StatusPill tone="accent">Age {age}</StatusPill></Card> : null}
 
-      {age >= 14 ? <OtherActionComposer domains={['education', 'career', 'business', 'organization', 'politics']} placeholder="Something we didn't put in a menu…" /> : null}
+      {age >= 14 ? <OtherActionComposer domains={['education', 'career', 'business', 'organization', 'politics']} placeholder="Something we did not put in a menu…" /> : null}
     </AppScreen>
   );
 }
