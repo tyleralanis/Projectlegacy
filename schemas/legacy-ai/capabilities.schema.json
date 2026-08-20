@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-legacy.ai-capabilities.schema.json",
+  "type": "object",
+  "required": [
+    "moduleVersion",
+    "baselineAvailable",
+    "enhancedAvailable",
+    "supportedLanguages"
+  ],
+  "properties": {
+    "moduleVersion": {
+      "type": "string"
+    },
+    "baselineAvailable": {
+      "const": true
+    },
+    "enhancedAvailable": {
+      "type": "boolean"
+    },
+    "enhancedReason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "supportedLanguages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "foundationModelsAvailable": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

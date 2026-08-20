@@ -1,0 +1,54 @@
+name: EAS iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: EAS build profile
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+      submit:
+        description: Submit the finished build to App Store Connect
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Require Expo authentication
+        run: test -n "${{ secrets.EXPO_TOKEN }}" || (echo "Add the EXPO_TOKEN repository secret before running this workflow." && exit 1)
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6.0.8
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Set up Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: 22.0.0
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify product
+        run: pnpm verify
+      - name: Start EAS build
+        if: ${{ !inputs.submit }}
+        run: eas build --platform ios --profile "${{ inputs.profile }}" --non-interactive --no-wait
+      - name: Start EAS build and submit
+        if: ${{ inputs.submit }}
+        run: eas build --platform ios --profile "${{ inputs.profile }}" --non-interactive --no-wait --auto-submit

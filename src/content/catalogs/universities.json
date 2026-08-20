@@ -1,0 +1,5 @@
+[
+  { "id": "organization-harborview-university", "name": "Harborview University", "prestige": 72, "network": 68, "tuitionCentsPerYear": 2400000, "minimumAge": 16, "maximumAge": 110 },
+  { "id": "organization-commonwealth-institute", "name": "Commonwealth Institute", "prestige": 91, "network": 89, "tuitionCentsPerYear": 6200000, "minimumAge": 16, "maximumAge": 110 },
+  { "id": "organization-harbor-trades", "name": "Harbor Technical College", "prestige": 54, "network": 61, "tuitionCentsPerYear": 980000, "minimumAge": 15, "maximumAge": 110 }
+]

@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-legacy.intent-request.schema.json",
+  "type": "object",
+  "required": [
+    "requestId",
+    "text",
+    "actorId",
+    "domain",
+    "allowedActions",
+    "candidates"
+  ],
+  "properties": {
+    "requestId": {
+      "type": "string"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "actorId": {
+      "type": "string"
+    },
+    "domain": {
+      "type": "string"
+    },
+    "locale": {
+      "type": "string",
+      "default": "en-US"
+    },
+    "allowedActions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 80
+    },
+    "candidates": {
+      "type": "array",
+      "maxItems": 80,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "facts": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "activeContext": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,11 @@
+export type LegacyAIMode = 'baseline' | 'foundation_models';
+export type JSONValue = string | number | boolean | null | JSONValue[] | { [key: string]: JSONValue };
+export type CandidateEntity = { id:string; type:string; name:string; aliases?:string[]; facts?:Record<string,JSONValue> };
+export type LegacyAICapabilities={moduleVersion:string;baselineAvailable:true;enhancedAvailable:boolean;enhancedReason?:string|null;supportedLanguages:string[];foundationModelsAvailable?:boolean};
+export type IntentRequest={requestId:string;text:string;actorId:string;domain:string;locale?:string;allowedActions:string[];candidates:CandidateEntity[];activeContext?:Record<string,JSONValue>};
+export type IntentAction={verb:string;targetIds:string[];parameters:Record<string,JSONValue>;destructive?:boolean};
+export type IntentResponse={requestId:string;status:'proposal'|'clarification'|'unsupported'|'error';modeUsed:LegacyAIMode;confidence:number;requiresConfirmation:boolean;clarification?:string|null;actions:IntentAction[];safetyFlags:string[];diagnostics?:Record<string,JSONValue>};
+export type SceneResponseRequest={requestId:string;text:string;rubric:string[];context?:Record<string,JSONValue>;candidates?:CandidateEntity[]};
+export type SceneTextRequest={requestId:string;sceneType:string;facts:Record<string,JSONValue>;persona?:Record<string,JSONValue>;fallbackNarrative:string;fallbackNPCSpeech:string[];maxLength?:number};
+export type SceneResponseResult={requestId:string;modeUsed:LegacyAIMode;narrative:string;npcSpeech:string[];interpretation:Record<string,number>;memoryCandidates?:JSONValue[];safetyFlags:string[];engineAction:'none'};
+export type SceneTextResult=SceneResponseResult;

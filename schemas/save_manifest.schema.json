@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-legacy.save-manifest.schema.json",
+  "type": "object",
+  "required": [
+    "saveId",
+    "schemaVersion",
+    "engineVersion",
+    "contentVersion",
+    "worldSeed",
+    "createdAt",
+    "exportedAt",
+    "databaseFile"
+  ],
+  "properties": {
+    "saveId": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "engineVersion": {
+      "type": "string"
+    },
+    "contentVersion": {
+      "type": "string"
+    },
+    "worldSeed": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "string"
+    },
+    "exportedAt": {
+      "type": "string"
+    },
+    "databaseFile": {
+      "type": "string"
+    },
+    "checksum": {
+      "type": "string"
+    },
+    "displaySummary": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

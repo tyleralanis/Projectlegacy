@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-legacy.scene-response-request.schema.json",
+  "type": "object",
+  "required": [
+    "requestId",
+    "text",
+    "rubric"
+  ],
+  "properties": {
+    "requestId": {
+      "type": "string"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "rubric": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 20
+    },
+    "context": {
+      "type": "object"
+    },
+    "candidates": {
+      "type": "array",
+      "maxItems": 80
+    }
+  },
+  "additionalProperties": false
+}

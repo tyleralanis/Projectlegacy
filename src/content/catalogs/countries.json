@@ -1,0 +1,5 @@
+[
+  { "id": "country-harbor-republic", "name": "Harbor Republic", "population": 18400000, "stability": 74, "ruleOfLaw": 78, "educationIndex": 76, "marketAccess": 82 },
+  { "id": "country-northland", "name": "Northland", "population": 32900000, "stability": 68, "ruleOfLaw": 71, "educationIndex": 81, "marketAccess": 77 },
+  { "id": "country-sundara", "name": "Sundara", "population": 64100000, "stability": 59, "ruleOfLaw": 54, "educationIndex": 63, "marketAccess": 69 }
+]

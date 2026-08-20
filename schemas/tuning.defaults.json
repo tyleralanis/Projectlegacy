@@ -1,0 +1,43 @@
+{
+  "time": {
+    "canonicalTickDays": 7,
+    "advanceOptionsWeeks": [
+      1,
+      4,
+      13,
+      26,
+      52
+    ],
+    "defaultAdultAdvanceWeeks": 13
+  },
+  "eventSeverity": {
+    "S0": "ambient",
+    "S1": "minor",
+    "S2": "meaningful",
+    "S3": "major",
+    "S4": "critical"
+  },
+  "npc": {
+    "importantMemoryRetention": "permanent/importance-based",
+    "backgroundPromotionOnMeaningfulInteraction": true
+  },
+  "economy": {
+    "exactHiddenProbabilitiesShownByDefault": false,
+    "guaranteedProfitStrategiesAllowed": false
+  },
+  "business": {
+    "policyDrivenRoutineOperations": true,
+    "delegationIncreasesWithScale": true
+  },
+  "intent": {
+    "maxActionsPerProposal": 4,
+    "confirmBelowConfidence": 0.86,
+    "confirmAllDestructiveBelowConfidence": 0.97
+  },
+  "offline": {
+    "required": true,
+    "hostedAIAllowed": false,
+    "cloudSaveRequired": false,
+    "accountRequired": false
+  }
+}

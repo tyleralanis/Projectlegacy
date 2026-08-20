@@ -1,0 +1,38 @@
+name: Publish OTA update
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Compatible update channel
+        type: choice
+        options:
+          - preview
+          - production
+        default: preview
+      message:
+        description: Release note
+        required: true
+        default: Game content and interface update
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+      - name: Publish compatible OTA update
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: pnpm dlx eas-cli@22.0.0 update --channel "${{ inputs.channel }}" --message "${{ inputs.message }}" --non-interactive

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-legacy.event.schema.json",
+  "type": "object",
+  "required": [
+    "id",
+    "version",
+    "domain",
+    "severity",
+    "eligibility",
+    "choices",
+    "autoResolution",
+    "consequences"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_.-]+$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "domain": {
+      "enum": [
+        "life",
+        "family",
+        "education",
+        "career",
+        "business",
+        "property",
+        "markets",
+        "relationship",
+        "health",
+        "legal",
+        "reputation",
+        "organization",
+        "politics",
+        "geopolitics",
+        "dynasty"
+      ]
+    },
+    "severity": {
+      "enum": [
+        "S0",
+        "S1",
+        "S2",
+        "S3",
+        "S4"
+      ]
+    },
+    "cooldownWeeks": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "eligibility": {
+      "type": "object"
+    },
+    "participants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "choices": {
+      "type": "array"
+    },
+    "otherActionFamilies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "autoResolution": {
+      "type": "object"
+    },
+    "consequences": {
+      "type": "array"
+    },
+    "memoryHooks": {
+      "type": "array"
+    },
+    "evidenceHooks": {
+      "type": "array"
+    },
+    "summary": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

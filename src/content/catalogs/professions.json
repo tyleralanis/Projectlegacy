@@ -1,0 +1,6 @@
+[
+  { "id": "profession-operations", "title": "Operations specialist", "sector": "Logistics", "weeklySalaryCents": 84600, "minimumAge": 16 },
+  { "id": "profession-banker", "title": "Commercial banker", "sector": "Finance", "weeklySalaryCents": 182000, "minimumAge": 21 },
+  { "id": "profession-attorney", "title": "Attorney", "sector": "Legal", "weeklySalaryCents": 205000, "minimumAge": 24 },
+  { "id": "profession-public-servant", "title": "Public servant", "sector": "Government", "weeklySalaryCents": 121000, "minimumAge": 18 }
+]

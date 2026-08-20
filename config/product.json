@@ -1,0 +1,20 @@
+{
+  "displayName": "Project Legacy",
+  "internalName": "Project Legacy",
+  "slug": "project-legacy",
+  "expoOwner": "tyalanis",
+  "scheme": "projectlegacy",
+  "bundleIdentifier": "com.tyleralanis.projectlegacy",
+  "androidPackage": "com.tyleralanis.projectlegacy",
+  "version": "0.1.0",
+  "buildNumber": "1",
+  "easProjectId": "667fff42-5eb5-4077-8688-f5f8a95caab4",
+  "supportEmail": "tyalanis@gmail.com",
+  "supportUrl": "https://tyleralanis.github.io/Projectlegacy/support/",
+  "privacyUrl": "https://tyleralanis.github.io/Projectlegacy/privacy/",
+  "termsUrl": "https://tyleralanis.github.io/Projectlegacy/",
+  "iap": {
+    "enabled": false,
+    "founderUnlock": "com.tyleralanis.projectlegacy.founder"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-legacy.intent-response.schema.json",
+  "type": "object",
+  "required": [
+    "requestId",
+    "status",
+    "modeUsed",
+    "confidence",
+    "requiresConfirmation",
+    "actions",
+    "safetyFlags"
+  ],
+  "properties": {
+    "requestId": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "proposal",
+        "clarification",
+        "unsupported",
+        "error"
+      ]
+    },
+    "modeUsed": {
+      "enum": [
+        "baseline",
+        "foundation_models"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "requiresConfirmation": {
+      "type": "boolean"
+    },
+    "clarification": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 240
+    },
+    "actions": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": [
+          "verb",
+          "targetIds",
+          "parameters"
+        ],
+        "properties": {
+          "verb": {
+            "type": "string"
+          },
+          "targetIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "parameters": {
+            "type": "object"
+          },
+          "destructive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "safetyFlags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "diagnostics": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

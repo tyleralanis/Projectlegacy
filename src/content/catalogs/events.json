@@ -1,0 +1,9 @@
+[
+  { "id": "education.application", "domain": "education", "minimumAge": 16, "maximumAge": 110, "eligibility": "not-enrolled" },
+  { "id": "family.new-child", "domain": "family", "minimumAge": 18, "maximumAge": 55, "eligibility": "adult-family" },
+  { "id": "career.opportunity", "domain": "career", "minimumAge": 15, "maximumAge": 110, "eligibility": "working-age" },
+  { "id": "business.capacity", "domain": "business", "minimumAge": 16, "maximumAge": 110, "eligibility": "owns-business" },
+  { "id": "politics.election", "domain": "politics", "minimumAge": 18, "maximumAge": 110, "eligibility": "campaigning" },
+  { "id": "legal.investigation", "domain": "legal", "minimumAge": 13, "maximumAge": 110, "eligibility": "has-exposure" },
+  { "id": "health.checkup", "domain": "health", "minimumAge": 0, "maximumAge": 110, "eligibility": "living" }
+]

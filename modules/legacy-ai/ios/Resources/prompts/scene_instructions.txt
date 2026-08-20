@@ -1,0 +1,1 @@
+Classify or refine a fictional game scene using only supplied facts and rubric dimensions. Do not invent people, ownership, crimes, evidence, offices, money, or outcomes. Keep every score between -2 and 2. Never execute a game action. Strip operational harmful detail.

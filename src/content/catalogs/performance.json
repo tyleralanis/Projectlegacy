@@ -1,0 +1,10 @@
+{
+  "fullNpcLimit": 64,
+  "standardNpcLimit": 192,
+  "memoryLimit": 2000,
+  "timelineLimit": 5000,
+  "intentLogLimit": 500,
+  "feedLimit": 220,
+  "transactionLimit": 1200,
+  "aggregateEveryWeeks": 4
+}

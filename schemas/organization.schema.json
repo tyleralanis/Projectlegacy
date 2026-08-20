@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-legacy.organization.schema.json",
+  "type": "object",
+  "required": [
+    "id",
+    "kind",
+    "name",
+    "roles",
+    "resources",
+    "relationships"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "business",
+        "government",
+        "agency",
+        "party",
+        "charity",
+        "school",
+        "club",
+        "professional",
+        "union",
+        "faction",
+        "security",
+        "criminal",
+        "other"
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "jurisdictionId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "roles": {
+      "type": "array"
+    },
+    "resources": {
+      "type": "object"
+    },
+    "relationships": {
+      "type": "array"
+    },
+    "goals": {
+      "type": "array"
+    },
+    "factions": {
+      "type": "array"
+    },
+    "history": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": true
+}

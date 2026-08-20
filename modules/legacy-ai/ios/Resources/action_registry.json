@@ -1,0 +1,1400 @@
+{
+  "version": "1.0.0",
+  "actions": [
+    {
+      "id": "relationship.contact",
+      "aliases": [
+        "contact",
+        "call",
+        "text",
+        "reach out to"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "relationship.spend_time",
+      "aliases": [
+        "spend time",
+        "hang out",
+        "visit"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "relationship.gift",
+      "aliases": [
+        "give a gift",
+        "gift"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "relationship.transfer_cash",
+      "aliases": [
+        "transfer cash",
+        "give",
+        "send money",
+        "pay"
+      ],
+      "requiredSlots": [
+        "amount"
+      ],
+      "optionalSlots": [
+        "memo"
+      ],
+      "entityTypes": [
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "relationship.invite",
+      "aliases": [
+        "invite"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "relationship.date",
+      "aliases": [
+        "date",
+        "ask out"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "relationship.propose",
+      "aliases": [
+        "propose",
+        "get engaged"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "relationship.separate",
+      "aliases": [
+        "separate",
+        "break up",
+        "leave my partner"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "relationship.reconcile",
+      "aliases": [
+        "reconcile",
+        "get back together"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "relationship.support",
+      "aliases": [
+        "support",
+        "help financially"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "education.apply",
+      "aliases": [
+        "apply to school",
+        "apply to college",
+        "apply"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "school",
+        "activity"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "education.enroll",
+      "aliases": [
+        "enroll",
+        "start school"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "school",
+        "activity"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "education.withdraw",
+      "aliases": [
+        "withdraw",
+        "drop out"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "school",
+        "activity"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "education.transfer",
+      "aliases": [
+        "transfer schools",
+        "transfer"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "school",
+        "activity"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "education.study",
+      "aliases": [
+        "study"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "school",
+        "activity"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "education.retake",
+      "aliases": [
+        "retake"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "school",
+        "activity"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "education.join_activity",
+      "aliases": [
+        "join activity",
+        "join club"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "school",
+        "activity"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "career.apply",
+      "aliases": [
+        "apply for job",
+        "apply to job"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "job",
+        "company"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "career.interview",
+      "aliases": [
+        "interview"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "job",
+        "company"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "career.negotiate_offer",
+      "aliases": [
+        "negotiate offer",
+        "counter job offer"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "job",
+        "company"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "career.accept_offer",
+      "aliases": [
+        "accept offer",
+        "take the job"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "job",
+        "company"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "career.quit",
+      "aliases": [
+        "quit",
+        "resign",
+        "leave my job"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "job",
+        "company"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "career.request_raise",
+      "aliases": [
+        "request raise",
+        "ask for a raise"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "job",
+        "company"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "career.relocate",
+      "aliases": [
+        "relocate",
+        "move for work"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "job",
+        "company"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "business.create",
+      "aliases": [
+        "start a company",
+        "start a business",
+        "create company",
+        "launch a business",
+        "open a business"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "business.contribute_capital",
+      "aliases": [
+        "contribute capital",
+        "put money into"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "amount"
+      ],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "business.borrow",
+      "aliases": [
+        "business loan",
+        "borrow"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "amount"
+      ],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "business.advertise",
+      "aliases": [
+        "advertise",
+        "run ads"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "business.set_price",
+      "aliases": [
+        "set price",
+        "price at"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "business.hire",
+      "aliases": [
+        "hire"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "business.fire",
+      "aliases": [
+        "fire",
+        "terminate"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "business.delegate",
+      "aliases": [
+        "delegate"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "business.expand",
+      "aliases": [
+        "expand"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "business.acquire",
+      "aliases": [
+        "acquire",
+        "buy company",
+        "purchase company"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "business.sell",
+      "aliases": [
+        "sell company",
+        "sell business"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "business.raise_capital",
+      "aliases": [
+        "raise capital",
+        "raise funding"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "amount"
+      ],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "business.counter_investment",
+      "aliases": [
+        "counter at",
+        "counter investment",
+        "counter offer"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "equity",
+        "boardSeat",
+        "valuation",
+        "cash",
+        "founderRemainsCEO"
+      ],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "business.restructure",
+      "aliases": [
+        "restructure"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "business.dissolve",
+      "aliases": [
+        "dissolve",
+        "close business"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "company",
+        "character"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "property.offer_purchase",
+      "aliases": [
+        "offer to buy",
+        "make an offer",
+        "offer"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "price",
+        "downPaymentFraction"
+      ],
+      "entityTypes": [
+        "property",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "property.buy",
+      "aliases": [
+        "buy property",
+        "buy the house",
+        "purchase property"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "price",
+        "downPaymentFraction"
+      ],
+      "entityTypes": [
+        "property",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "property.sell",
+      "aliases": [
+        "sell property",
+        "sell the house",
+        "sell the duplex",
+        "sell"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "price",
+        "downPaymentFraction"
+      ],
+      "entityTypes": [
+        "property",
+        "character"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "property.finance",
+      "aliases": [
+        "finance property",
+        "get a mortgage",
+        "mortgage"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "property",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "property.refinance",
+      "aliases": [
+        "refinance"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "property",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "property.rent_out",
+      "aliases": [
+        "rent out",
+        "lease out"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "property",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "property.set_rent",
+      "aliases": [
+        "set rent",
+        "raise rent",
+        "lower rent"
+      ],
+      "requiredSlots": [
+        "amount"
+      ],
+      "optionalSlots": [],
+      "entityTypes": [
+        "property",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "property.renovate",
+      "aliases": [
+        "renovate",
+        "remodel"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "property",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "property.manage",
+      "aliases": [
+        "manage property",
+        "manage"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "property",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "property.transfer_ownership",
+      "aliases": [
+        "transfer ownership",
+        "deed to"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "property",
+        "character"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "property.develop",
+      "aliases": [
+        "develop property",
+        "develop"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "property",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "markets.buy",
+      "aliases": [
+        "buy shares",
+        "buy stock",
+        "invest in"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "amount",
+        "percentage"
+      ],
+      "entityTypes": [
+        "investment",
+        "company"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "markets.sell",
+      "aliases": [
+        "sell shares",
+        "sell stock"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "amount",
+        "percentage"
+      ],
+      "entityTypes": [
+        "investment",
+        "company"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "markets.allocate",
+      "aliases": [
+        "allocate portfolio",
+        "allocate"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "amount",
+        "percentage"
+      ],
+      "entityTypes": [
+        "investment",
+        "company"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "markets.rebalance",
+      "aliases": [
+        "rebalance"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "investment",
+        "company"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "markets.leverage",
+      "aliases": [
+        "use leverage",
+        "leverage"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "investment",
+        "company"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "markets.short",
+      "aliases": [
+        "short"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "amount",
+        "percentage"
+      ],
+      "entityTypes": [
+        "investment",
+        "company"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "markets.confidential_info_choice",
+      "aliases": [
+        "trade on confidential information",
+        "use inside information"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "investment",
+        "company"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "organization.join",
+      "aliases": [
+        "join organization",
+        "join"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "organization",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "organization.leave",
+      "aliases": [
+        "leave organization"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "organization",
+        "character"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "organization.appoint",
+      "aliases": [
+        "appoint"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "organization",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "organization.remove",
+      "aliases": [
+        "remove"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "organization",
+        "character"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "organization.fund",
+      "aliases": [
+        "fund organization",
+        "fund"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "amount"
+      ],
+      "entityTypes": [
+        "organization",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "organization.vote",
+      "aliases": [
+        "vote"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "organization",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "organization.negotiate",
+      "aliases": [
+        "negotiate with organization",
+        "negotiate"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "organization",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "organization.take_control_attempt",
+      "aliases": [
+        "take control",
+        "seize control"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "organization",
+        "character"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "politics.run_for_office",
+      "aliases": [
+        "run for office",
+        "run for mayor",
+        "run for president"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "office",
+        "character",
+        "organization"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "politics.endorse",
+      "aliases": [
+        "endorse"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "office",
+        "character",
+        "organization"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "politics.donate",
+      "aliases": [
+        "donate to campaign",
+        "political donation"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [
+        "amount"
+      ],
+      "entityTypes": [
+        "office",
+        "character",
+        "organization"
+      ],
+      "destructive": false,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "politics.campaign_action",
+      "aliases": [
+        "campaign",
+        "hold a rally"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "office",
+        "character",
+        "organization"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "politics.coalition_negotiation",
+      "aliases": [
+        "coalition negotiation",
+        "form a coalition"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "office",
+        "character",
+        "organization"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "politics.appoint",
+      "aliases": [
+        "appoint minister",
+        "appoint official"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "office",
+        "character",
+        "organization"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "politics.policy_action",
+      "aliases": [
+        "policy action",
+        "propose policy"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "office",
+        "character",
+        "organization"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "legal.hire_counsel",
+      "aliases": [
+        "hire counsel",
+        "hire a lawyer",
+        "get an attorney"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "case",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "legal.cooperate",
+      "aliases": [
+        "cooperate"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "case",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "legal.contest",
+      "aliases": [
+        "contest",
+        "fight the case"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "case",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "legal.settle",
+      "aliases": [
+        "settle"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "case",
+        "character"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "legal.plea",
+      "aliases": [
+        "plead",
+        "take a plea"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "case",
+        "character"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "legal.trial",
+      "aliases": [
+        "go to trial",
+        "trial"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "case",
+        "character"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "legal.appeal",
+      "aliases": [
+        "appeal"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "case",
+        "character"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    },
+    {
+      "id": "misconduct.tax_evasion_attempt",
+      "aliases": [
+        "evade taxes",
+        "hide income from tax",
+        "tax evasion",
+        "hide the income"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character",
+        "company",
+        "organization"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "misconduct.insider_trade_attempt",
+      "aliases": [
+        "insider trade",
+        "trade on inside information"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character",
+        "company",
+        "organization"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "misconduct.bribery_attempt",
+      "aliases": [
+        "bribe",
+        "pay off official"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character",
+        "company",
+        "organization"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "misconduct.embezzlement_attempt",
+      "aliases": [
+        "embezzle",
+        "take company money"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character",
+        "company",
+        "organization"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "misconduct.corruption_attempt",
+      "aliases": [
+        "corrupt official",
+        "corruption"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character",
+        "company",
+        "organization"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "misconduct.faction_power_seizure_attempt",
+      "aliases": [
+        "stage a coup",
+        "seize power",
+        "armed faction"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character",
+        "company",
+        "organization"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "estate.gift_asset",
+      "aliases": [
+        "gift asset",
+        "leave the house to"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character",
+        "property",
+        "company",
+        "investment"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "estate.transfer_interest",
+      "aliases": [
+        "transfer interest",
+        "transfer shares to heir"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character",
+        "property",
+        "company",
+        "investment"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "estate.designate_successor",
+      "aliases": [
+        "designate successor",
+        "name successor"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character",
+        "property",
+        "company",
+        "investment"
+      ],
+      "destructive": true,
+      "confirmationMandatory": true
+    },
+    {
+      "id": "estate.estate_plan_choice",
+      "aliases": [
+        "estate plan",
+        "make a will"
+      ],
+      "requiredSlots": [],
+      "optionalSlots": [],
+      "entityTypes": [
+        "character",
+        "property",
+        "company",
+        "investment"
+      ],
+      "destructive": false,
+      "confirmationMandatory": false
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+[
+  { "id": "security-nova", "symbol": "NVA", "name": "Nova Materials", "sector": "Industry", "priceCents": 4800, "quality": 63, "volatility": 34, "dividendYieldBps": 120 },
+  { "id": "security-lumen", "symbol": "LMN", "name": "Lumen Health", "sector": "Health", "priceCents": 7250, "quality": 72, "volatility": 27, "dividendYieldBps": 90 },
+  { "id": "security-cedar", "symbol": "CDR", "name": "Cedar Financial", "sector": "Finance", "priceCents": 3960, "quality": 58, "volatility": 31, "dividendYieldBps": 240 },
+  { "id": "security-orbit", "symbol": "ORB", "name": "Orbit Systems", "sector": "Technology", "priceCents": 11400, "quality": 76, "volatility": 48, "dividendYieldBps": 0 },
+  { "id": "security-common", "symbol": "CMN", "name": "Common Market Fund", "sector": "Diversified", "priceCents": 10000, "quality": 70, "volatility": 16, "dividendYieldBps": 180 }
+]

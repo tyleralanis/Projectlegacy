@@ -1,0 +1,6 @@
+[
+  { "id": "law-fiduciary-duty", "name": "Fiduciary duty", "category": "business", "minimumAge": 18, "abstractOnly": true },
+  { "id": "law-market-integrity", "name": "Market integrity", "category": "finance", "minimumAge": 18, "abstractOnly": true },
+  { "id": "law-public-corruption", "name": "Public corruption", "category": "politics", "minimumAge": 18, "abstractOnly": true },
+  { "id": "law-personal-property", "name": "Personal property", "category": "civil", "minimumAge": 0, "abstractOnly": false }
+]
