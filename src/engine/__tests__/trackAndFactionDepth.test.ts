@@ -96,6 +96,31 @@ describe('hidden private movement', () => {
     expect(result.world.timeline.some((entry) => entry.title === 'The power seizure failed' || entry.title === 'The movement seized national power')).toBe(true);
   });
 
+  it('keeps additional spouses independent from the primary partner pointer', () => {
+    const world = createWorld({ seed: 'plural-household', startAgeYears: 35, nowISO: '2026-01-01T00:00:00.000Z' });
+    const actor = world.characters[world.playerCharacterId];
+    actor.cashCents = 5_000_000;
+    actor.partnerId = 'character-riley';
+    world.characters['character-riley'].partnerId = actor.id;
+    world.relationships['relationship-player-riley'].kind = 'spouse';
+
+    const founded = executeSupplementalDepth(world, { verb: 'organization.found_inner_circle', targetIds: [], parameters: { archetype: 'religious' } })!;
+    const profile = innerCircleProfile(founded.world)!;
+    const organization = founded.world.organizations[profile.organizationId];
+    const extraSpouseId = organization.memberIds.find((id) => id !== actor.id)!;
+    const extraRelationship = Object.values(founded.world.relationships).find((relationship) => relationship.characterIds.includes(actor.id) && relationship.characterIds.includes(extraSpouseId))!;
+    extraRelationship.kind = 'spouse';
+    const beforeAffection = extraRelationship.affection;
+
+    const dated = executeSupplementalDepth(founded.world, { verb: 'relationship.date_night', targetIds: [extraSpouseId], parameters: { amountCents: 12_000 } })!;
+    expect(dated.world.characters[actor.id].partnerId).toBe('character-riley');
+    expect(dated.world.relationships[extraRelationship.id].affection).toBeGreaterThan(beforeAffection);
+
+    const separated = executeSupplementalDepth(dated.world, { verb: 'relationship.separate', targetIds: [extraSpouseId], parameters: {}, destructive: true }, true)!;
+    expect(separated.world.characters[actor.id].partnerId).toBe('character-riley');
+    expect(separated.world.relationships[extraRelationship.id].kind).not.toBe('spouse');
+  });
+
   it('preserves the older generic takeover path when no hidden movement exists', () => {
     const world = createWorld({ seed: 'legacy-power-path', startAgeYears: 35, nowISO: '2026-01-01T00:00:00.000Z' });
     const result = executeSupplementalDepth(world, { verb: 'misconduct.faction_power_seizure_attempt', targetIds: [], parameters: {}, destructive: true }, true);
