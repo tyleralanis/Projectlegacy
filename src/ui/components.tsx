@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { router, usePathname } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -19,16 +20,39 @@ import { radius, spacing, useAppTheme } from './theme';
 import { getActiveEvent } from '@/engine/simulation';
 import { useGame } from '@/state/GameProvider';
 
+const ROOT_TAB_PATHS = new Set(['/', '/life', '/people', '/work', '/money', '/more']);
+
 export function AppScreen({ children, scroll = true }: { children: React.ReactNode; scroll?: boolean }) {
   const { colors } = useAppTheme();
+  const pathname = usePathname();
+  const showFloatingBack = !ROOT_TAB_PATHS.has(pathname);
+  const contentStyle = [styles.scrollContent, showFloatingBack && styles.scrollContentWithBack];
   const content = scroll ? (
-    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>{children}</ScrollView>
+    <ScrollView contentContainerStyle={contentStyle} showsVerticalScrollIndicator={false}>{children}</ScrollView>
   ) : (
-    <View style={styles.scrollContent}>{children}</View>
+    <View style={contentStyle}>{children}</View>
   );
   return (
     <SafeAreaView edges={['top']} style={[styles.screen, { backgroundColor: colors.canvas }]}>
       {content}
+      {showFloatingBack ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          onPress={() => router.back()}
+          style={({ pressed }) => [
+            styles.floatingBack,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              shadowColor: colors.shadow,
+              opacity: pressed ? 0.78 : 1,
+            },
+          ]}
+        >
+          <Text style={[styles.floatingBackText, { color: colors.text }]}>‹ Back</Text>
+        </Pressable>
+      ) : null}
       <TimeTray />
     </SafeAreaView>
   );
@@ -172,6 +196,9 @@ function TimeTray() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 132, gap: 16 },
+  scrollContentWithBack: { paddingTop: 58 },
+  floatingBack: { position: 'absolute', top: 7, left: 16, zIndex: 90, minHeight: 38, borderRadius: radius.pill, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 13, justifyContent: 'center', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 7 },
+  floatingBackText: { fontSize: 13, lineHeight: 18, fontWeight: '800' },
   card: { borderRadius: radius.card, borderWidth: StyleSheet.hairlineWidth, padding: 16, gap: 12, shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
   eyebrow: { fontSize: 11, lineHeight: 15, fontWeight: '700', letterSpacing: 1.3 },
   heading: { fontSize: 22, lineHeight: 28, fontWeight: '700', letterSpacing: -0.35 },
