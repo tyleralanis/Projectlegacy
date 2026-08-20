@@ -149,7 +149,8 @@ describe('system polish', () => {
     actor.knowledge = 95;
     actor.discipline = 95;
     actor.charisma = 90;
-    actor.competencies = { management: 95, communication: 90, leadership: 90 };
+    actor.competencies = { management: 95, communication: 95, leadership: 95 };
+    Object.values(before.careers).forEach((career) => { if (career.characterId === actor.id) career.active = false; });
     before.careers['career-polish'] = strongCareer(before);
     const cashBefore = actor.cashCents;
     const afterSource = advanceCopy(before, 1);
