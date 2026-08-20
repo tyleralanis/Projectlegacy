@@ -17,6 +17,32 @@ const ALIASES: Record<string, string[]> = {
   'relationship.transfer_cash': ['give', 'send', 'transfer', 'gift cash'],
   'relationship.propose': ['propose', 'ask to marry', 'get married'],
   'relationship.separate': ['separate', 'break up', 'end the relationship', 'divorce'],
+  'relationship.prioritize': ['make them a priority', 'prioritize', 'focus on my relationship', 'focus on our relationship', 'make time every week'],
+  'relationship.deep_talk': ['deep talk', 'real conversation', 'heart to heart', 'talk things through', 'have an honest conversation'],
+  'relationship.check_in': ['check in', 'ask how they are', 'ask about their life', 'see how they are doing'],
+  'relationship.apologize': ['apologize', 'say sorry', 'own what i did', 'make an apology'],
+  'relationship.forgive': ['forgive', 'let it go', 'stop holding it against'],
+  'relationship.celebrate': ['celebrate', 'celebrate them', 'celebrate with'],
+  'relationship.gift': ['thoughtful gift', 'buy a gift', 'give a gift', 'get them a gift'],
+  'relationship.date_night': ['date night', 'take my wife out', 'take my husband out', 'take my partner out'],
+  'relationship.weekend_away': ['weekend away', 'romantic weekend', 'take a trip together', 'get away together'],
+  'relationship.support_goal': ['support their goal', 'help with their goal', 'back their goal', 'support their career', 'support their dream'],
+  'relationship.ask_favor': ['ask a favor', 'ask for help', 'call in a favor'],
+  'relationship.lend_money': ['lend money', 'loan money', 'give them a loan'],
+  'relationship.collect_loan': ['ask for repayment', 'collect the loan', 'pay me back', 'ask them to repay'],
+  'relationship.set_boundary': ['set a boundary', 'set boundaries', 'draw a line'],
+  'relationship.one_on_one': ['one on one', 'one-on-one', 'quality time alone', 'spend time alone together'],
+  'relationship.reminisce': ['reminisce', 'talk about old times', 'remember when', 'talk about our past'],
+  'relationship.plan_future': ['plan our future', 'talk about the future', 'future together', 'make plans together'],
+  'relationship.introduce_network': ['make an introduction', 'introduce them to', 'connect them with', 'use my network for'],
+  'family.family_dinner': ['family dinner', 'have everyone over', 'get the family together', 'dinner with the family'],
+  'family.help_school': ['help with school', 'help with homework', 'tutor my child', 'help them study'],
+  'family.teach_money': ['teach about money', 'teach finances', 'teach them about money', 'financial lesson'],
+  'family.attend_event': ['attend their event', 'show up for', 'go to their game', 'go to their recital', 'go to their graduation'],
+  'family.caregiving': ['care for', 'take care of', 'help my aging parent', 'caregiving', 'help with their health'],
+  'family.set_expectations': ['set expectations', 'set rules', 'parenting rules', 'give them rules'],
+  'family.invite_business': ['bring into the business', 'hire my child', 'hire my brother', 'hire my sister', 'family business job'],
+  'family.discuss_inheritance': ['discuss inheritance', 'talk about inheritance', 'talk about my will', 'talk about succession'],
   'education.study': ['study', 'focus on school', 'academics'],
   'education.apply': ['apply to school', 'apply to college', 'university application'],
   'education.enroll': ['enroll', 'accept the school offer', 'start the program'],
@@ -61,17 +87,37 @@ const ALIASES: Record<string, string[]> = {
   'estate.gift_asset': ['gift my property', 'gift my shares', 'give an asset'],
 };
 
+function relationshipAliases(world: WorldState, characterId: string): string[] {
+  const actor = world.characters[world.playerCharacterId];
+  const relationship = Object.values(world.relationships).find((item) => item.characterIds.includes(actor.id) && item.characterIds.includes(characterId));
+  if (!relationship) return ['known person'];
+  const aliases: string[] = [];
+  if (actor.parentIds.includes(characterId)) aliases.push('my parent', 'parent');
+  if (actor.childIds.includes(characterId)) aliases.push('my child', 'my kid', 'child');
+  if (actor.partnerId === characterId) aliases.push('my partner', 'my spouse', 'my wife', 'my husband');
+  if (relationship.kind === 'sibling') aliases.push('my sibling', 'my brother', 'my sister');
+  if (relationship.kind === 'friend') aliases.push('my friend');
+  if (relationship.kind === 'rival') aliases.push('my rival');
+  if (relationship.kind === 'professional') aliases.push('my coworker', 'my colleague', 'professional contact');
+  if (relationship.kind === 'relative') aliases.push('my relative', 'family');
+  return aliases.length > 0 ? aliases : [relationship.kind];
+}
+
 function candidatesFromWorld(world: WorldState): CandidateEntity[] {
   const actor = world.characters[world.playerCharacterId];
   const people = Object.values(world.characters)
     .filter((character) => character.id !== actor.id && character.isAlive)
-    .slice(0, 24)
+    .slice(0, 30)
     .map((character) => ({
       id: character.id,
       type: 'character',
       name: `${character.firstName} ${character.lastName}`,
-      aliases: [character.firstName.toLowerCase(), character.lastName.toLowerCase(), character.parentIds.includes(actor.id) ? 'my child' : 'family'],
-      facts: { relationshipRole: character.parentIds.includes(actor.id) ? 'child' : 'known person', isLiving: character.isAlive },
+      aliases: [character.firstName.toLowerCase(), character.lastName.toLowerCase(), ...relationshipAliases(world, character.id)],
+      facts: {
+        relationshipRole: relationshipAliases(world, character.id)[0] ?? 'known person',
+        isLiving: character.isAlive,
+        cityId: character.cityId,
+      },
     }));
   const assets: CandidateEntity[] = [
     ...Object.values(world.businesses).filter((business) => business.active).map((business) => ({ id: business.id, type: 'business', name: business.name, aliases: ['my business', 'my company', business.sector.toLowerCase()], facts: { ownershipBps: business.playerOwnershipBps } })),
@@ -80,7 +126,7 @@ function candidatesFromWorld(world: WorldState): CandidateEntity[] {
     ...Object.values(world.organizations).map((organization) => ({ id: organization.id, type: 'organization', name: organization.name, aliases: [organization.kind] })),
     ...Object.values(world.education).filter((record) => record.characterId === actor.id && record.status === 'accepted').map((record) => ({ id: record.id, type: 'education', name: record.level, aliases: ['my offer', 'school offer', 'the program'] })),
   ];
-  return [...people, ...assets].slice(0, 60);
+  return [...people, ...assets].slice(0, 70);
 }
 
 function parseAmountCents(text: string): number | undefined {
