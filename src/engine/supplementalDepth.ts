@@ -1,6 +1,7 @@
 import { applyAutonomousWorld } from './autonomousWorld';
 import { allocateId } from './createWorld';
 import { recordHistory } from './history';
+import { applyImmersionWorld } from './immersionWorld';
 import { applyLivingWorldPass } from './livingWorld';
 import type { ActionResult, Business, FocusArea, IntentAction, WorldState } from './types';
 
@@ -316,5 +317,6 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
   }
 
   const lived = applyLivingWorldPass(before, world);
-  return applyAutonomousWorld(before, lived);
+  const autonomous = applyAutonomousWorld(before, lived);
+  return applyImmersionWorld(before, autonomous);
 }
