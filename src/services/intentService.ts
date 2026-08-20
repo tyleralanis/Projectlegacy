@@ -48,16 +48,25 @@ const ALIASES: Record<string, string[]> = {
   'family.invite_business': ['bring into the business', 'hire my child', 'hire my brother', 'hire my sister', 'family business job'],
   'family.discuss_inheritance': ['discuss inheritance', 'talk about inheritance', 'talk about my will', 'talk about succession'],
 
+  'skills.practice': ['practice a skill', 'work on my skills', 'improve my finance skill', 'improve my investing skill', 'improve my sales skill', 'practice negotiation', 'learn management', 'practice leadership', 'improve communication', 'learn coding', 'learn technology'],
+
   'education.study': ['study', 'focus on school', 'academics'],
   'education.apply': ['apply to school', 'apply to college', 'university application'],
   'education.enroll': ['enroll', 'accept the school offer', 'start the program'],
   'education.choose_major': ['choose a major', 'declare a major', 'major in', 'study finance', 'study business', 'study computer science', 'study engineering'],
+  'education.add_minor': ['add a minor', 'choose a minor', 'minor in', 'pick a minor'],
   'education.office_hours': ['office hours', 'meet my professor', 'talk to my professor', 'get help from professor'],
+  'education.research_project': ['research project', 'serious school project', 'do a big project', 'independent study', 'capstone project'],
+  'education.find_mentor': ['find a professor mentor', 'academic mentor', 'find a mentor at school', 'faculty mentor'],
   'education.join_club': ['join a college club', 'join a campus club', 'campus organization', 'student club'],
   'education.internship': ['get an internship', 'take an internship', 'find an internship', 'internship'],
   'education.sports_train': ['train for sports', 'train harder', 'athletic training', 'practice harder'],
   'education.sports_compete': ['compete', 'play the game', 'enter competition', 'compete in sports'],
   'education.sports_seek_scholarship': ['athletic scholarship', 'sports scholarship', 'seek a scholarship'],
+  'sports.choose_sport': ['choose a sport', 'play basketball', 'play football', 'play soccer', 'play baseball', 'run track', 'wrestle', 'play hockey', 'play tennis'],
+  'sports.practice': ['practice my sport', 'sports practice', 'train for my sport', 'practice basketball', 'practice football', 'practice baseball'],
+  'sports.compete': ['compete seriously', 'play my game', 'play the tournament', 'race', 'play the match'],
+  'sports.seek_agent': ['go pro', 'turn pro', 'get a sports agent', 'seek an agent', 'professional athlete', 'enter the draft'],
 
   'career.apply': ['apply for', 'find a job', 'get a job', 'look for work'],
   'career.request_raise': ['ask for a raise', 'request a raise', 'more pay'],
@@ -67,6 +76,9 @@ const ALIASES: Record<string, string[]> = {
   'career.train': ['learn job skills', 'train for my job', 'take job training', 'improve my skills'],
   'career.seek_promotion': ['ask for promotion', 'go for a promotion', 'seek promotion', 'get promoted'],
   'career.office_politics': ['office politics', 'build internal support', 'play office politics', 'win over leadership'],
+  'career.find_mentor': ['find a mentor at work', 'get a career mentor', 'find a sponsor', 'ask for mentorship'],
+  'career.take_lead': ['take the lead', 'lead a project', 'take more responsibility', 'volunteer to lead'],
+  'career.build_alliance': ['build an alliance at work', 'make an ally at work', 'build a work alliance', 'get a coworker on my side'],
 
   'business.create': [
     'start a business', 'found a company', 'open a company', 'start a company', 'start a startup',
@@ -85,6 +97,10 @@ const ALIASES: Record<string, string[]> = {
   'business.invest_rd': ['invest in r&d', 'research and development', 'develop new products', 'product development'],
   'business.reward_staff': ['reward employees', 'employee bonuses', 'staff bonus', 'pay bonuses'],
   'business.expand_location': ['open another location', 'expand locations', 'second location', 'new branch'],
+  'business.add_product': ['launch a new product', 'add a product', 'new service', 'new product line', 'launch another service'],
+  'business.improve_product': ['improve the product', 'invest in this product', 'upgrade the product', 'improve our service'],
+  'business.retire_product': ['retire the product', 'kill the product', 'discontinue the product', 'stop selling this'],
+  'business.acquire_company': ['buy another company', 'acquire a company', 'buy a competitor', 'acquire a competitor', 'business acquisition'],
 
   'property.buy': ['buy a property', 'buy a home', 'buy the duplex', 'purchase property', 'buy a house'],
   'property.sell': ['sell the property', 'sell my house', 'sell the duplex'],
@@ -98,6 +114,7 @@ const ALIASES: Record<string, string[]> = {
   'markets.research': ['research the stock', 'research stock', 'research company', 'build a thesis', 'analyze the stock'],
   'markets.set_strategy': ['set investment strategy', 'investing strategy', 'be an index investor', 'value investing', 'growth investing', 'income investing', 'speculative investing'],
   'markets.rebalance': ['rebalance', 'rebalance portfolio', 'balance my portfolio'],
+  'markets.private_deal': ['private deal', 'private investment', 'private equity deal', 'angel investment', 'invest in a private company', 'take the private deal'],
 
   'organization.create': ['start an organization', 'create an organization', 'form a group', 'start a group', 'start a club', 'start a charity', 'start a movement'],
   'organization.found_inner_circle': ['start a cult', 'form a cult', 'create a cult', 'start my own cult', 'found a cult', 'build a secret movement'],
@@ -121,6 +138,8 @@ const ALIASES: Record<string, string[]> = {
   'politics.run_for_office': ['run for', 'campaign for office', 'run for mayor', 'run for council'],
   'politics.campaign_action': ['campaign', 'fund my campaign'],
   'politics.policy_action': ['set policy', 'pass a policy', 'govern'],
+  'politics.build_coalition': ['build a coalition', 'build political support', 'form a coalition', 'win over other groups'],
+  'politics.recruit_staff': ['hire campaign staff', 'hire political staff', 'recruit senior staff', 'hire a campaign manager'],
   'legal.hire_counsel': ['hire a lawyer', 'hire counsel', 'get an attorney'],
   'legal.cooperate': ['cooperate', 'work with investigators'],
   'legal.contest': ['contest', 'fight the case'],
@@ -130,6 +149,8 @@ const ALIASES: Record<string, string[]> = {
   'misconduct.faction_power_seizure_attempt': ['seize power', 'take over the government', 'coup'],
   'estate.designate_successor': ['make my heir', 'designate successor', 'choose my heir'],
   'estate.gift_asset': ['gift my property', 'gift my shares', 'give an asset'],
+  'dynasty.family_council': ['family council', 'call a family meeting about succession', 'family governance meeting', 'talk to the family about the fortune'],
+  'dynasty.train_heir': ['train my heir', 'prepare my heir', 'mentor my successor', 'teach my child to run the empire'],
 };
 
 function relationshipAliases(world: WorldState, characterId: string): string[] {
@@ -190,6 +211,37 @@ function definitionsForDomains(domains: Domain[]) {
   return ALL_ACTIONS.filter((action) => domains.includes(action.domain));
 }
 
+function inferSkill(normalized: string): string {
+  if (/account|finance|cash flow|valuation/.test(normalized)) return 'finance';
+  if (/invest|portfolio|stock|market/.test(normalized)) return 'investing';
+  if (/sell|sales|customer|close/.test(normalized)) return 'sales';
+  if (/negotiat|deal|bargain/.test(normalized)) return 'negotiation';
+  if (/lead|leadership/.test(normalized)) return 'leadership';
+  if (/manage|management|operation/.test(normalized)) return 'management';
+  if (/code|software|tech|data/.test(normalized)) return 'technology';
+  if (/weld|mechanic|trade|construction|fabricat/.test(normalized)) return 'trades';
+  if (/law|legal/.test(normalized)) return 'law';
+  if (/medicine|medical|nurs|healthcare/.test(normalized)) return 'medicine';
+  if (/sport|athlet|fitness/.test(normalized)) return 'athletics';
+  if (/media|content|press|audience/.test(normalized)) return 'media';
+  if (/politic|campaign|government/.test(normalized)) return 'politics';
+  if (/parent|child|kid/.test(normalized)) return 'parenting';
+  if (/communicat|speak|public speaking|write/.test(normalized)) return 'communication';
+  return 'academics';
+}
+
+function inferSport(normalized: string): string {
+  if (normalized.includes('basketball')) return 'Basketball';
+  if (normalized.includes('football')) return 'Football';
+  if (normalized.includes('soccer')) return 'Soccer';
+  if (normalized.includes('baseball')) return 'Baseball';
+  if (normalized.includes('hockey')) return 'Hockey';
+  if (normalized.includes('tennis')) return 'Tennis';
+  if (normalized.includes('wrestl')) return 'Wrestling';
+  if (normalized.includes('track') || normalized.includes('race')) return 'Track & Field';
+  return 'Basketball';
+}
+
 function inferParameters(actionId: string, normalized: string, amountCents: number | undefined, percentBps: number | undefined): Record<string, number | string | boolean | null> {
   const parameters: Record<string, number | string | boolean | null> = {};
   if (amountCents !== undefined) parameters.amountCents = amountCents;
@@ -197,6 +249,10 @@ function inferParameters(actionId: string, normalized: string, amountCents: numb
     if (actionId === 'business.advertise') parameters.marketingBps = percentBps;
     else parameters.equityBps = percentBps;
   }
+
+  if (actionId === 'skills.practice') parameters.skill = inferSkill(normalized);
+  if (actionId === 'sports.choose_sport') parameters.sport = inferSport(normalized);
+  if (actionId === 'business.add_product') parameters.name = normalized.includes('service') ? 'New service' : 'New product';
 
   if (actionId === 'business.create' && /\b(app|software|tech|technology)\b/.test(normalized)) parameters.sector = 'Technology';
   if (actionId === 'business.create' && /\b(real estate|property company)\b/.test(normalized)) parameters.sector = 'Real Estate';
@@ -220,6 +276,14 @@ function inferParameters(actionId: string, normalized: string, amountCents: numb
           : /\b(law|politic|government)\b/.test(normalized) ? 'Law & Policy'
             : /\b(business|management|entrepreneur)\b/.test(normalized) ? 'Business'
               : 'General studies';
+  }
+
+  if (actionId === 'education.add_minor') {
+    parameters.minor = /\b(finance|accounting|economics)\b/.test(normalized) ? 'Finance'
+      : /\b(computer|software|technology|coding)\b/.test(normalized) ? 'Computer Science'
+        : /\b(politic|government)\b/.test(normalized) ? 'Political Science'
+          : /\b(business|management)\b/.test(normalized) ? 'Business'
+            : 'Economics';
   }
 
   if (actionId === 'education.join_club') parameters.club = normalized.includes('business') ? 'Entrepreneurship Society' : normalized.includes('debate') ? 'Debate Society' : 'Campus Society';
@@ -253,29 +317,49 @@ function inferParameters(actionId: string, normalized: string, amountCents: numb
 }
 
 const NO_TARGET_ACTIONS = new Set([
+  'skills.practice',
   'business.create',
+  'business.add_product',
+  'business.improve_product',
+  'business.retire_product',
+  'business.acquire_company',
   'organization.create',
   'organization.found_inner_circle',
   'property.buy',
   'markets.allocate',
   'markets.set_strategy',
   'markets.rebalance',
+  'markets.private_deal',
   'politics.run_for_office',
+  'politics.build_coalition',
+  'politics.recruit_staff',
   'career.apply',
   'career.work_hard',
   'career.network',
   'career.train',
   'career.seek_promotion',
   'career.office_politics',
+  'career.find_mentor',
+  'career.take_lead',
+  'career.build_alliance',
   'education.apply',
   'education.study',
   'education.choose_major',
+  'education.add_minor',
   'education.office_hours',
+  'education.research_project',
+  'education.find_mentor',
   'education.join_club',
   'education.internship',
   'education.sports_train',
   'education.sports_compete',
   'education.sports_seek_scholarship',
+  'sports.choose_sport',
+  'sports.practice',
+  'sports.compete',
+  'sports.seek_agent',
+  'dynasty.family_council',
+  'dynasty.train_heir',
   'faction.set_archetype',
   'faction.recruit',
   'faction.hold_gathering',
