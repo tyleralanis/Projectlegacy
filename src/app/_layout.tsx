@@ -6,8 +6,8 @@ import { AccessibilityInfo } from 'react-native';
 
 import { stageUpdateWithoutBlocking } from '@/services/updateService';
 import { GameProvider, useGame } from '@/state/GameProvider';
-import { LoadingScreen, NoticeBanner } from '@/ui/components';
 import { ThemeAmbientLayer } from '@/ui/ThemeAtmosphere';
+import { LoadingScreen, NoticeBanner } from '@/ui/components';
 import { useAppTheme } from '@/ui/theme';
 
 void SplashScreen.preventAutoHideAsync();
