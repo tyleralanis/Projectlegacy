@@ -12,6 +12,7 @@ import {
   normalizeSupplementalState as normalizeBaseSupplementalState,
 } from './supplementalDepth';
 import { applySystemPolishAdvance } from './systemPolish';
+import { executeSystemPolishAction } from './systemPolishActions';
 import type { ActionResult, IntentAction, WorldState } from './types';
 
 export { ceoCandidates, getTuitionBalance, hasGymMembership };
@@ -23,15 +24,17 @@ export function normalizeSupplementalState(source: WorldState): WorldState {
 
 /**
  * OTA-safe extension point for life systems that were added after the original
- * supplemental engine grew large. Keeping the bridge tiny lets the app route
- * every player action through the newest local simulation without duplicating
- * the older tuition, CEO, relationship, faction, and track handlers.
+ * supplemental engine grew large. Existing verbs that needed better economics
+ * or consequence modeling are intercepted first; no new menu-only duplicate
+ * actions are required for the polish pass.
  */
 export function executeSupplementalDepth(
   source: WorldState,
   action: IntentAction,
   confirmed = false,
 ): ActionResult | null {
+  const polished = executeSystemPolishAction(source, action);
+  if (polished) return polished;
   const earlyApplication = executeSecondarySchoolApplication(source, action);
   if (earlyApplication) return earlyApplication;
   const careerApplication = executeCareerApplication(source, action);
