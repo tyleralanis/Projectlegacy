@@ -1,3 +1,4 @@
+import { executeCareerApplication } from './careerApplicationBridge';
 import { executeSecondarySchoolApplication } from './educationApplicationBridge';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
 import {
@@ -25,6 +26,8 @@ export function executeSupplementalDepth(
 ): ActionResult | null {
   const earlyApplication = executeSecondarySchoolApplication(source, action);
   if (earlyApplication) return earlyApplication;
+  const careerApplication = executeCareerApplication(source, action);
+  if (careerApplication) return careerApplication;
   const systemic = executeLifeSystemsDepth(source, action);
   if (systemic) return systemic;
   return executeBaseSupplementalDepth(source, action, confirmed);
