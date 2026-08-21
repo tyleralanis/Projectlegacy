@@ -8,6 +8,7 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 const catalogSource = read('src/content/lifeSystemsActionCatalog.ts');
 const engineSource = read('src/engine/lifeSystemsDepth.ts');
 const delegationSource = read('src/engine/delegationDepth.ts');
+const financeEducationSource = read('src/engine/financeEducationPolish.ts');
 const bridgeSource = read('src/engine/supplementalDepthBridge.ts');
 const providerSource = read('src/state/GameProvider.tsx');
 const intentBridgeSource = read('src/services/lifeIntentBridge.ts');
@@ -18,7 +19,7 @@ if (actionIds.length === 0) throw new Error('Life-system action catalog is empty
 if (new Set(actionIds).size !== actionIds.length) throw new Error('Life-system action catalog contains duplicate IDs.');
 
 const declaredVerbs = new Set(
-  [engineSource, delegationSource]
+  [engineSource, delegationSource, financeEducationSource]
     .flatMap((source) => [...source.matchAll(/'([a-z]+\.[a-z_]+)'/g)].map((match) => match[1])),
 );
 const missingHandlers = actionIds.filter((id) => !declaredVerbs.has(id));
@@ -26,6 +27,7 @@ if (missingHandlers.length > 0) throw new Error(`Life-system actions are missing
 
 if (!bridgeSource.includes('executeLifeSystemsDepth(source, action)')) throw new Error('Supplemental bridge is not routing actions through lifeSystemsDepth.');
 if (!bridgeSource.includes('executeDelegationDepth(source, action)')) throw new Error('Supplemental bridge is not routing portfolio/CEO actions through delegationDepth.');
+if (!bridgeSource.includes('executeFinanceEducationPolish(source, action, confirmed)')) throw new Error('Supplemental bridge is not routing finance and education actions through financeEducationPolish.');
 if (!bridgeSource.includes('prepareDelegationAdvance(before, after)')) throw new Error('Supplemental bridge is not preparing recurring delegated state before legacy expiry logic.');
 if (!bridgeSource.includes('applyLifeSystemsAdvance(before, base)')) throw new Error('Supplemental bridge is not advancing recurring life systems.');
 if (!bridgeSource.includes('applyDelegationAdvance(before, life)')) throw new Error('Supplemental bridge is not advancing delegated portfolio and CEO systems.');
