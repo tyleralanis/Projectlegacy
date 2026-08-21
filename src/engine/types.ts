@@ -112,8 +112,37 @@ export interface GameSettings {
 
 export interface AdvisorServiceState { id: EntityId; kind: 'wealth-manager' | 'private-counsel'; label: string; weeklyCostCents: MoneyCents; quality: number; active: boolean; }
 
+export type PersonalAssetCategory = 'car' | 'aircraft' | 'collectible' | 'jewelry';
+export type LicenseKind = 'driver' | 'private-pilot';
+export interface PersonalAsset {
+  id: EntityId;
+  ownerId: EntityId;
+  catalogId: string;
+  category: PersonalAssetCategory;
+  name: string;
+  purchasePriceCents: MoneyCents;
+  valueCents: MoneyCents;
+  weeklyUpkeepCents: MoneyCents;
+  annualChangeBps: number;
+  acquiredWeek: number;
+  requiredLicense?: LicenseKind;
+  hiredOperator?: boolean;
+  operatorAnnualCostCents?: MoneyCents;
+  operatorPaidThroughWeek?: number;
+}
+export interface LicenseRecord {
+  id: EntityId;
+  characterId: EntityId;
+  kind: LicenseKind;
+  status: 'training' | 'active';
+  startedWeek: number;
+  requiredWeeks: number;
+  costCents: MoneyCents;
+  completedWeek?: number;
+}
+
 export interface WorldState {
-  metadata: WorldMetadata; calendar: CalendarState; rngState: number; playerCharacterId: EntityId; economy: EconomyState; characters: Record<EntityId, Character>; relationships: Record<EntityId, Relationship>; memories: Record<EntityId, MemoryRecord>; education: Record<EntityId, EducationState>; careers: Record<EntityId, CareerState>; organizations: Record<EntityId, Organization>; businesses: Record<EntityId, Business>; properties: Record<EntityId, PropertyAsset>; securities: Record<EntityId, Security>; holdings: Record<EntityId, Holding>; liabilities: Record<EntityId, Liability>; politics: Record<EntityId, PoliticalState>; exposures: Record<EntityId, LegalExposure>; legalCases: Record<EntityId, LegalCase>; transactions: TransactionRecord[]; events: GameEvent[]; feed: FeedEntry[]; timeline: TimelineEntry[]; favorites: FavoriteRef[]; intentHistory: IntentAuditEntry[]; countries: Record<EntityId, CountryState>; activeCountryId: EntityId; background: BackgroundSimulationState; performance: PerformanceBudgetState; dynasty: DynastyState; settings: GameSettings; advisors?: Record<EntityId, AdvisorServiceState>;
+  metadata: WorldMetadata; calendar: CalendarState; rngState: number; playerCharacterId: EntityId; economy: EconomyState; characters: Record<EntityId, Character>; relationships: Record<EntityId, Relationship>; memories: Record<EntityId, MemoryRecord>; education: Record<EntityId, EducationState>; careers: Record<EntityId, CareerState>; organizations: Record<EntityId, Organization>; businesses: Record<EntityId, Business>; properties: Record<EntityId, PropertyAsset>; securities: Record<EntityId, Security>; holdings: Record<EntityId, Holding>; liabilities: Record<EntityId, Liability>; politics: Record<EntityId, PoliticalState>; exposures: Record<EntityId, LegalExposure>; legalCases: Record<EntityId, LegalCase>; transactions: TransactionRecord[]; events: GameEvent[]; feed: FeedEntry[]; timeline: TimelineEntry[]; favorites: FavoriteRef[]; intentHistory: IntentAuditEntry[]; countries: Record<EntityId, CountryState>; activeCountryId: EntityId; background: BackgroundSimulationState; performance: PerformanceBudgetState; dynasty: DynastyState; settings: GameSettings; advisors?: Record<EntityId, AdvisorServiceState>; personalAssets?: Record<EntityId, PersonalAsset>; licenses?: Record<EntityId, LicenseRecord>;
 }
 
 export interface AdvanceSummary { requestedWeeks: number; advancedWeeks: number; startWeek: number; endWeek: number; cashDeltaCents: MoneyCents; netWorthDeltaCents: MoneyCents; highlights: string[]; delegatedDecisions: string[]; missedOpportunities: string[]; consequences: string[]; explanation?: OutcomeExplanation; interruptedByEventId?: EntityId; }
