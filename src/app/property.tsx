@@ -7,6 +7,7 @@ import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { monthlyPropertyListings } from '@/content/lifeCatalogs';
 import { WORLD_CONTENT } from '@/content/worldContent';
 import { formatMoney } from '@/engine/money';
+import { renovationOptionsForProperty } from '@/engine/propertyRenovations';
 import { portfolioManagementFeeWeeklyCents, propertyManagerActive } from '@/engine/supplementalDepthBridge';
 import { useGame } from '@/state/GameProvider';
 import { AppScreen, Body, Card, Heading, ProgressBar, SectionHeader, Stat, StatusPill } from '@/ui/components';
@@ -23,7 +24,6 @@ export default function PropertyScreen() {
   const city = WORLD_CONTENT.cities.find((item) => item.id === actor.cityId);
   const properties = Object.values(world.properties).filter((property) => property.ownerId === actor.id);
   const listings = monthlyPropertyListings(world.calendar.week, actor.cityId);
-  const monthNumber = Math.floor(world.calendar.week / 4);
   const managerActive = propertyManagerActive(world);
   const managementFee = portfolioManagementFeeWeeklyCents(world);
   const portfolioValue = properties.reduce((sum, property) => sum + property.valueCents, 0);
@@ -38,7 +38,7 @@ export default function PropertyScreen() {
 
   return (
     <AppScreen>
-      <SubviewHeader eyebrow="Money" title="Property" subtitle="Real estate is a leveraged cash-flow business now. Value, debt, occupancy, rent, condition, tenants, rates, management, development, and vacancies all have to work together." />
+      <SubviewHeader eyebrow="Money" title="Property" subtitle="Buy, rent, repair, improve, finance, manage, or sell." />
       <View style={styles.segmentRow}>
         {(['browse', 'owned'] as ViewMode[]).map((item) => (
           <Pressable key={item} onPress={() => setMode(item)} style={[styles.segment, { backgroundColor: mode === item ? colors.accent : colors.secondary, borderColor: mode === item ? colors.accent : colors.border }]}><Text style={[styles.segmentText, { color: mode === item ? '#FFFFFF' : colors.text }]}>{item === 'browse' ? 'Browse market' : `Owned (${properties.length})`}</Text></Pressable>
@@ -46,7 +46,7 @@ export default function PropertyScreen() {
       </View>
 
       {mode === 'browse' ? <>
-        <Card accent><View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">🏡 {city?.name ?? 'Local'} listings</Heading><Body secondary>Inventory refreshes each simulated month. Rates, rent potential, down payment, and condition matter more than the sticker price alone.</Body></View><StatusPill tone="accent">{listings.length} listings</StatusPill></View></Card>
+        <Card accent><View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">🏡 {city?.name ?? 'Local'} listings</Heading><Body secondary>Inventory refreshes each simulated month.</Body></View><StatusPill tone="accent">{listings.length} listings</StatusPill></View></Card>
         <View style={styles.section}>
           {listings.map((listing) => {
             const down = Math.round(listing.valueCents * 0.2);
@@ -60,7 +60,7 @@ export default function PropertyScreen() {
               <Card key={listing.id}>
                 <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading>{listing.name}</Heading><Body secondary>{listing.kind} · condition {listing.condition}/100</Body></View><StatusPill tone={actor.cashCents >= down ? 'success' : 'warning'}>{formatMoney(listing.valueCents, true)}</StatusPill></View>
                 <View style={styles.stats}><Stat label="20% down" value={formatMoney(down, true)} /><Stat label="Rent / wk" value={formatMoney(listing.weeklyRentCents, true)} /><Stat label="Gross yield" value={`${grossYield.toFixed(1)}%`} /><Stat label="Est. net / wk" value={formatMoney(estimatedNet, true)} tone={estimatedNet >= 0 ? 'success' : 'danger'} /></View>
-                <Body secondary>Estimated net includes modeled operating costs, current-rate mortgage interest, and your portfolio-management fee if retained. Vacancy and future repairs can still make reality worse.</Body>
+                <Body secondary>Estimate includes operating costs, current-rate interest, and management if retained.</Body>
                 <EngineActionButton title={`Buy for ${formatMoney(listing.valueCents, true)}`} action={{ verb: 'property.buy', targetIds: [], parameters: { name: listing.name, kind: listing.kind, valueCents: listing.valueCents, weeklyRentCents: listing.weeklyRentCents, condition: listing.condition, cityId: listing.cityId } }} tone="accent" />
               </Card>
             );
@@ -71,22 +71,20 @@ export default function PropertyScreen() {
           <SectionHeader title="Portfolio" action={<StatusPill tone={portfolioNet >= 0 ? 'success' : 'warning'}>{portfolioNet >= 0 ? 'Cash-flow positive' : 'Cash-flow negative'}</StatusPill>} />
           <View style={styles.stats}><Stat label="Value" value={formatMoney(portfolioValue, true)} tone="legacy" /><Stat label="Equity" value={formatMoney(portfolioEquity, true)} tone={portfolioEquity >= 0 ? 'success' : 'danger'} /><Stat label="LTV" value={`${portfolioLtv.toFixed(0)}%`} tone={portfolioLtv >= 75 ? 'danger' : 'default'} /><Stat label="Net / wk" value={formatMoney(portfolioNet, true)} tone={portfolioNet >= 0 ? 'success' : 'danger'} /></View>
           <View style={styles.stats}><Stat label="Rent collected" value={formatMoney(occupiedRent, true)} /><Stat label="Interest" value={formatMoney(portfolioInterest, true)} /><Stat label="Operating" value={formatMoney(portfolioOperating, true)} /><Stat label="Vacancies" value={vacancyCount.toString()} tone={vacancyCount > 0 ? 'danger' : 'default'} /></View>
-          <Body secondary>Equity is not cash flow. A portfolio can make you wealthy on paper while rates, vacancies, repairs, and management consume the week-to-week economics.</Body>
         </Card> : null}
 
         {properties.length > 0 ? <Card accent>
           <View style={styles.row}>
-            <View style={{ flex: 1, gap: 3 }}><Heading size="small">Portfolio management</Heading><Body secondary>{managerActive ? `One manager covers all ${properties.length} properties, routine maintenance, screening, and ordinary vacancy turnover. New acquisitions join automatically.` : 'Hire one manager for the entire portfolio instead of paying for and managing a separate relationship on every property.'}</Body></View>
+            <View style={{ flex: 1, gap: 3 }}><Heading size="small">Portfolio management</Heading><Body secondary>{managerActive ? `One manager covers all ${properties.length} properties.` : 'Hire one manager for the whole portfolio.'}</Body></View>
             <StatusPill tone={managerActive ? 'success' : 'neutral'}>{managerActive ? 'Managed' : 'Self-managed'}</StatusPill>
           </View>
           <View style={styles.stats}><Stat label="Properties covered" value={managerActive ? properties.length.toString() : '0'} /><Stat label="Current fee / wk" value={formatMoney(managerActive ? managementFee : 0, true)} /><Stat label="Fee model" value="9% rent" /></View>
-          <Body secondary>The manager will try to fill viable vacancies on recurring monthly checks. Major financing, rent policy, development, purchases, and sales still remain owner decisions.</Body>
           {managerActive
             ? <EngineActionButton title="End portfolio management" action={{ verb: 'property.end_management', targetIds: [], parameters: {} }} tone="danger" />
             : <EngineActionButton title="Hire one portfolio manager" action={{ verb: 'property.manage_portfolio', targetIds: [], parameters: {} }} tone="accent" />}
         </Card> : null}
 
-        {properties.length === 0 ? <Card><Heading size="small">No property yet</Heading><Body secondary>Switch to Browse market to see what is available this month.</Body></Card> : properties.map((property) => {
+        {properties.length === 0 ? <Card><Heading size="small">No property yet</Heading><Body secondary>Browse the market to see what is available.</Body></Card> : properties.map((property) => {
           const equity = property.valueCents - property.debtCents;
           const ltv = property.valueCents > 0 ? property.debtCents / property.valueCents * 100 : 0;
           const interest = Math.round((property.debtCents * (world.economy.policyRate + 0.02)) / 52);
@@ -101,6 +99,7 @@ export default function PropertyScreen() {
           const development = Object.values(world.memories).find((memory) => memory.category.startsWith(`Property · Development · ${property.id} ·`) && memory.unresolved);
           const multiCost = Math.max(10_000_000, Math.round(property.valueCents * 0.58));
           const commercialCost = Math.max(10_000_000, Math.round(property.valueCents * 0.72));
+          const renovationOptions = renovationOptionsForProperty(property);
           return (
             <Card key={property.id}>
               <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading>{property.name}</Heading><Body secondary>{property.kind} · {property.occupancy} · {property.managed || managerActive ? 'professionally managed' : 'self-managed'}</Body></View><StatusPill tone={equity >= 0 ? 'success' : 'danger'}>{formatMoney(equity, true)} equity</StatusPill></View>
@@ -111,13 +110,13 @@ export default function PropertyScreen() {
               {development ? <Card accent><View style={styles.row}><Heading size="small">🏗️ Under development</Heading><StatusPill tone="warning">Construction</StatusPill></View><Body secondary>{development.narrative}</Body></Card> : null}
 
               {tenant ? <Card accent>
-                <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">Tenant · {tenant.firstName} {tenant.lastName}</Heading><Body secondary>Rent is backed by a real relationship now. Condition, price, repairs, and accumulated friction can change whether the lease survives.</Body></View><StatusPill tone={(tenantRelationship?.resentment ?? 0) >= 50 ? 'warning' : 'success'}>{(tenantRelationship?.resentment ?? 0) >= 50 ? 'Friction' : 'Stable'}</StatusPill></View>
+                <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">Tenant · {tenant.firstName} {tenant.lastName}</Heading><Body secondary>Rent, condition, and repairs affect whether they stay.</Body></View><StatusPill tone={(tenantRelationship?.resentment ?? 0) >= 50 ? 'warning' : 'success'}>{(tenantRelationship?.resentment ?? 0) >= 50 ? 'Friction' : 'Stable'}</StatusPill></View>
                 <Body secondary>Trust {Math.round(tenantRelationship?.trust ?? 0)} · respect {Math.round(tenantRelationship?.respect ?? 0)} · resentment {Math.round(tenantRelationship?.resentment ?? 0)}</Body>
-              </Card> : property.occupancy === 'vacant' && managerActive && property.kind !== 'land' ? <Card accent><Heading size="small">Manager is handling the vacancy</Heading><Body secondary>The portfolio manager will screen and place a viable tenant on recurring monthly checks. You can still change rent, repair the unit, sell it, or end management while it is vacant.</Body></Card> : null}
+              </Card> : property.occupancy === 'vacant' && managerActive && property.kind !== 'land' ? <Card accent><Heading size="small">Manager is handling the vacancy</Heading><Body secondary>They will screen and place a viable tenant on recurring checks.</Body></Card> : null}
 
               {!development && property.kind === 'land' ? <View style={styles.section}>
                 <SectionHeader title="Develop the land" />
-                <Body secondary>Ground-up development ties up cash, creates carrying costs, and takes roughly a year before leasing can begin.</Body>
+                <Body secondary>Ground-up development takes roughly a year.</Body>
                 <View style={styles.actions}>
                   <EngineActionButton title={`Build multifamily · ${formatMoney(multiCost, true)}`} action={{ verb: 'property.develop', targetIds: [property.id], parameters: { targetKind: 'multifamily', amountCents: multiCost } }} tone="accent" style={styles.actionButton} />
                   <EngineActionButton title={`Build commercial · ${formatMoney(commercialCost, true)}`} action={{ verb: 'property.develop', targetIds: [property.id], parameters: { targetKind: 'commercial', amountCents: commercialCost } }} style={styles.actionButton} />
@@ -135,23 +134,20 @@ export default function PropertyScreen() {
                     <EngineActionButton title="End tenancy" action={{ verb: 'property.evict', targetIds: [property.id], parameters: {}, destructive: true }} tone="danger" style={styles.actionButton} />
                   </> : null}
                 </View>
-                {property.occupancy === 'tenant' ? <Body secondary>Rent increases are no longer free yield. Larger jumps can reduce trust, create resentment, or push the tenant into a real vacancy decision.</Body> : null}
 
-                <SectionHeader title="Condition & improvement" />
+                <SectionHeader title="Repairs & improvements" />
                 <View style={styles.actions}>
                   <EngineActionButton title="Repair what needs it" action={{ verb: 'property.repair', targetIds: [property.id], parameters: {} }} tone="accent" style={styles.actionButton} />
-                  <EngineActionButton title="Update kitchen" action={{ verb: 'property.renovate', targetIds: [property.id], parameters: { amountCents: Math.max(1_500_000, Math.round(property.valueCents * 0.025)) } }} style={styles.actionButton} />
-                  <EngineActionButton title="Major renovation" action={{ verb: 'property.renovate', targetIds: [property.id], parameters: { amountCents: Math.max(3_000_000, Math.round(property.valueCents * 0.05)) } }} style={styles.actionButton} />
+                  {renovationOptions.map((option) => <EngineActionButton key={option.id} title={`${option.label} · ${formatMoney(option.costCents, true)}`} action={{ verb: 'property.renovate', targetIds: [property.id], parameters: { renovationId: option.id, amountCents: option.costCents } }} style={styles.actionButton} />)}
                 </View>
 
                 <SectionHeader title="Finance" />
-                <Body secondary>Refinancing now depends on current rates, property condition, existing leverage, and closing costs. Pulling equity out increases future interest exposure.</Body>
                 <View style={styles.actions}><EngineActionButton title="Cash-out refinance" action={{ verb: 'property.refinance', targetIds: [property.id], parameters: {} }} style={styles.actionButton} /><EngineActionButton title="Sell property" action={{ verb: 'property.sell', targetIds: [property.id], parameters: {}, destructive: true }} tone="danger" style={styles.actionButton} /></View>
               </> : null}
             </Card>
           );
         })}
-        <OtherActionComposer domains={['property']} placeholder="Something else with a property, portfolio manager, rent, or development…" />
+        <OtherActionComposer domains={['property']} placeholder="Something else with a property…" />
       </View>}
     </AppScreen>
   );
