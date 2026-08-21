@@ -32,6 +32,26 @@ function normalizedText(text: string): string {
   return text.toLowerCase().replace(/[’']/g, "'").replace(/\s+/g, ' ').trim();
 }
 
+function factionExitIntent(text: string, domains: Domain[]): IntentResponse | undefined {
+  if (!domains.includes('organization')) return undefined;
+  const normalized = normalizedText(text);
+  let verb: 'faction.cash_out' | 'faction.dissolve' | 'faction.leave' | undefined;
+  if (/\b(cash out|take (?:the|all|my)? ?(?:cult|movement|group)? ?money and leave|raid (?:the|my)? ?(?:cult|movement) funds)\b/.test(normalized)) verb = 'faction.cash_out';
+  else if (/\b(end|dissolve|shut down|close|disband) (?:my |the )?(?:cult|movement|inner circle)\b/.test(normalized)) verb = 'faction.dissolve';
+  else if (/\b(leave|quit|step down from|walk away from) (?:my |the )?(?:cult|movement|inner circle)\b/.test(normalized)) verb = 'faction.leave';
+  if (!verb) return undefined;
+  return {
+    requestId: `faction-exit-${Date.now()}`,
+    status: 'proposal',
+    modeUsed: 'baseline',
+    confidence: 0.99,
+    requiresConfirmation: true,
+    actions: [{ verb, targetIds: [], parameters: {}, destructive: true }],
+    safetyFlags: [],
+    diagnostics: { parser: 'faction_exit_alias', proposedVerb: verb },
+  };
+}
+
 function amountCents(text: string): number | undefined {
   const match = text.replace(/,/g, '').match(/\$\s*(\d+(?:\.\d+)?)\s*(k|m|million|thousand)?/i);
   if (!match) return undefined;
@@ -118,6 +138,8 @@ function clarification(requestId: string, verb: string, detail: string): IntentR
 }
 
 export async function interpretPlayerIntent(world: WorldState, text: string, domains: Domain[]): Promise<IntentResponse> {
+  const factionExit = factionExitIntent(text, domains);
+  if (factionExit) return factionExit;
   const match = matchedLifeAction(text, domains);
   if (!match) return interpretBaseIntent(world, text, domains);
 
