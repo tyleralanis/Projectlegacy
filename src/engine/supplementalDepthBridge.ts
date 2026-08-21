@@ -8,6 +8,7 @@ import { executeSecondarySchoolApplication } from './educationApplicationBridge'
 import { applyLegalPolish } from './legalPolish';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
 import { applyNarrativeDepth } from './narrativeDepth';
+import { executePropertyPolishAction } from './propertyPolishActions';
 import { executeRebalancePolish } from './rebalancePolish';
 import {
   applySupplementalAdvance as applyBaseSupplementalAdvance,
@@ -35,6 +36,8 @@ export function executeSupplementalDepth(
 ): ActionResult | null {
   const ageGate = executeAgeActionGate(source, action);
   if (ageGate) return ageGate;
+  const property = executePropertyPolishAction(source, action);
+  if (property) return property;
   const rebalance = executeRebalancePolish(source, action);
   if (rebalance) return rebalance;
   const polished = executeSystemPolishAction(source, action);
