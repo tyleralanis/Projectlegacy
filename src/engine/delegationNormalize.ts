@@ -24,6 +24,23 @@ export function normalizeDelegatedWorld(source: WorldState): WorldState {
   const ownedProperties = Object.values(world.properties).filter((property) => property.ownerId === actor.id);
   if (ownedProperties.some((property) => property.managed)) ownedProperties.forEach((property) => { property.managed = true; });
 
+  // Some older saves retained the hired executive metadata and active CEO career
+  // but lost the delegated boolean. Reconstruct that authoritative state instead
+  // of making the owner handle routine operating decisions again. A deliberate
+  // CEO firing deletes the manager metadata, so it is not accidentally undone.
+  for (const business of Object.values(world.businesses)) {
+    if (!business.active || business.delegated || (business.ownerId ?? business.founderId) !== actor.id) continue;
+    if (!business.managerName || !business.managerQuality) continue;
+    const organization = world.organizations[business.organizationId];
+    const executiveId = organization?.leaderId;
+    const activeExecutiveCareer = executiveId
+      ? Object.values(world.careers).some((career) => career.active && career.characterId === executiveId && career.employerId === business.organizationId && /ceo|chief executive/i.test(career.title))
+      : false;
+    if (!executiveId || executiveId === actor.id || !activeExecutiveCareer) continue;
+    business.delegated = true;
+    recordHistory(world, 'business', `${business.managerName} resumed operating authority`, 'The save still contained a hired CEO and active executive role, so day-to-day delegation was restored instead of routing routine company decisions back to the owner.', { subjectIds: [business.id, executiveId], importance: 1 });
+  }
+
   for (const event of world.events.filter((item) => !item.resolved)) {
     if (event.templateId === 'business.capacity') {
       const business = Object.values(world.businesses).find((item) => item.active && item.delegated && event.participantIds.includes(item.organizationId));

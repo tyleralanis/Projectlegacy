@@ -5,6 +5,7 @@ import { applyContinuityPolish } from './continuityPolish';
 import { applyDelegationAdvance, executeDelegationDepth, prepareDelegationAdvance } from './delegationDepth';
 import { normalizeDelegatedWorld } from './delegationNormalize';
 import { executeSecondarySchoolApplication } from './educationApplicationBridge';
+import { applyFactionPolishAdvance, executeFactionPolish } from './factionPolish';
 import { applyFinanceEducationAdvance, executeFinanceEducationPolish, normalizeFinanceEducationState } from './financeEducationPolish';
 import { applyLegalPolish } from './legalPolish';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
@@ -49,6 +50,8 @@ export function executeSupplementalDepth(
   if (property) return property;
   const financeEducation = executeFinanceEducationPolish(source, action, confirmed);
   if (financeEducation) return financeEducation;
+  const faction = executeFactionPolish(source, action, confirmed);
+  if (faction) return faction;
   const rebalance = executeRebalancePolish(source, action);
   if (rebalance) return rebalance;
   const polished = executeSystemPolishAction(source, action);
@@ -73,7 +76,8 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
   const lifestyle = applyWealthLifestyleAdvance(before, ageProgressed);
   const life = applyLifeSystemsAdvance(before, lifestyle);
   const delegated = applyDelegationAdvance(before, life);
-  const polished = applySystemPolishAdvance(before, delegated);
+  const faction = applyFactionPolishAdvance(before, delegated);
+  const polished = applySystemPolishAdvance(before, faction);
   const continuous = applyContinuityPolish(before, polished);
   const legal = applyLegalPolish(before, continuous);
   const financed = applyFinanceEducationAdvance(before, legal);
