@@ -5,6 +5,7 @@ import { normalizeAgeProgressionState } from '../ageProgressionWorld';
 import { executeAgeActionGate } from '../ageActionGate';
 import { createWorld } from '../createWorld';
 import { netWorthCents } from '../money';
+import { executePropertyPolishAction } from '../propertyPolishActions';
 import { renovationOptionsForProperty } from '../propertyRenovations';
 import type { PropertyAsset } from '../types';
 import { applyWealthLifestyleAdvance, executeWealthLifestyleAction, hasActiveLicense } from '../wealthLifestyle';
@@ -110,6 +111,43 @@ describe('contextual property improvements', () => {
     const house = { ...base, kind: 'single-family' as const, name: 'Three-bedroom house' };
     const pool = renovationOptionsForProperty(house).find((option) => option.id === 'house-pool');
     expect(pool?.costCents).toBe(5_000_000);
+  });
+
+  it('removes one-time improvements after completion instead of leaving permanent buttons', () => {
+    const world = worldAtAge(30);
+    const actor = world.characters[world.playerCharacterId];
+    actor.cashCents = 100_000_000;
+    const house: PropertyAsset = { ...base, id: 'property-house', ownerId: actor.id, name: 'Three-bedroom house' };
+    world.properties[house.id] = house;
+
+    expect(renovationOptionsForProperty(house, world).some((option) => option.id === 'house-pool')).toBe(true);
+    const result = executePropertyPolishAction(world, { verb: 'property.renovate', targetIds: [house.id], parameters: { renovationId: 'house-pool' } });
+
+    expect(result?.validation.valid).toBe(true);
+    expect(result && renovationOptionsForProperty(result.world.properties[house.id], result.world).some((option) => option.id === 'house-pool')).toBe(false);
+  });
+
+  it('brings recurring commercial maintenance back only after its cooldown', () => {
+    const world = worldAtAge(30);
+    const actor = world.characters[world.playerCharacterId];
+    const commercial: PropertyAsset = { ...base, id: 'property-strip', ownerId: actor.id, kind: 'commercial', name: 'Harbor Retail Strip' };
+    world.properties[commercial.id] = commercial;
+    world.memories['memory-parking-lot'] = {
+      id: 'memory-parking-lot',
+      participantIds: [actor.id, commercial.id],
+      category: `Property · Improvement · ${commercial.id} · parking-lot`,
+      week: world.calendar.week,
+      valence: 0.45,
+      importance: 45,
+      permanent: true,
+      unresolved: false,
+      visibility: 'private',
+      narrative: 'Parking lot resurfaced.',
+    };
+
+    expect(renovationOptionsForProperty(commercial, world).some((option) => option.id === 'parking-lot')).toBe(false);
+    world.calendar.week += 624;
+    expect(renovationOptionsForProperty(commercial, world).some((option) => option.id === 'parking-lot')).toBe(true);
   });
 });
 
