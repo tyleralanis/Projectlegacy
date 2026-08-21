@@ -1,5 +1,5 @@
 import { executeAgeActionGate } from './ageActionGate';
-import { applyAgeProgressionAdvance, prepareAgeProgressionAdvance } from './ageProgressionWorld';
+import { applyAgeProgressionAdvance, normalizeAgeProgressionState, prepareAgeProgressionAdvance } from './ageProgressionWorld';
 import { executeCareerApplication } from './careerApplicationBridge';
 import { applyContinuityPolish } from './continuityPolish';
 import { applyDelegationAdvance, executeDelegationDepth, prepareDelegationAdvance } from './delegationDepth';
@@ -28,7 +28,10 @@ export { businessRunwayReserveCents, distributableBusinessCashCents, portfolioMa
 export { hasActiveLicense, licenseFor } from './wealthLifestyle';
 
 export function normalizeSupplementalState(source: WorldState): WorldState {
-  return normalizeWealthLifestyleState(normalizeDelegatedWorld(normalizeBaseSupplementalState(source)));
+  const base = normalizeBaseSupplementalState(source);
+  const delegated = normalizeDelegatedWorld(base);
+  const lifestyle = normalizeWealthLifestyleState(delegated);
+  return normalizeAgeProgressionState(lifestyle);
 }
 
 export function executeSupplementalDepth(
@@ -69,5 +72,5 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
   const polished = applySystemPolishAdvance(before, delegated);
   const continuous = applyContinuityPolish(before, polished);
   const legal = applyLegalPolish(before, continuous);
-  return applyNarrativeDepth(before, legal);
+  return normalizeAgeProgressionState(applyNarrativeDepth(before, legal));
 }
