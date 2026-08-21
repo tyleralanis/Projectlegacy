@@ -3,6 +3,9 @@ import { playerAgeYears } from './createWorld';
 import { recordHistory } from './history';
 import type { Character, Relationship, WorldState } from './types';
 
+const YOUNG_CHILD_RELATIONSHIP_EVENT_TEMPLATES = new Set(['relationship.reconnect', 'story.family-reach-out']);
+const INVALID_YOUNG_CHILD_CHOICE_TITLES = new Set(['Make actual time', 'Have a real call', 'Say you will catch up later', 'Make time', 'Keep some distance']);
+
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -46,6 +49,68 @@ function caregiverAvailability(world: WorldState, parent: Character): { score: n
   return { score: Math.max(0.65, 0.92 - stressPenalty), reason: 'present' };
 }
 
+function isParentRelationshipEvent(world: WorldState, participantIds: string[]): boolean {
+  const actor = world.characters[world.playerCharacterId];
+  return participantIds.some((id) => actor.parentIds.includes(id));
+}
+
+/**
+ * Repairs saves created under the older adult-first rules. This intentionally
+ * removes only relationship pressure that could not have been the child's
+ * responsibility at the age it was created; birth, household, school, and
+ * ordinary family history are left intact.
+ */
+export function normalizeAgeProgressionState(source: WorldState): WorldState {
+  const sourceActor = source.characters[source.playerCharacterId];
+  if (!sourceActor) return source;
+  const age = playerAgeYears(source);
+  const normalizedFocuses = normalizeFocusesForAge(age, sourceActor.focuses);
+  const focusChanged = normalizedFocuses.length !== sourceActor.focuses.length || normalizedFocuses.some((focus, index) => focus !== sourceActor.focuses[index]);
+  const staleParentRelationship = age < 8 && sourceActor.parentIds.some((parentId) => {
+    const relationship = relationshipWith(source, sourceActor.id, parentId);
+    return Boolean(relationship && relationship.lastInteractionWeek !== source.calendar.week);
+  });
+  const invalidThread = age < 8 && Object.values(source.memories).some((memory) => memory.unresolved && memory.category === 'Thread · Relationship' && memory.participantIds.some((id) => sourceActor.parentIds.includes(id)));
+  const invalidEvent = source.events.some((event) => !event.resolved && YOUNG_CHILD_RELATIONSHIP_EVENT_TEMPLATES.has(event.templateId) && (age < 5 || (age < 8 && isParentRelationshipEvent(source, event.participantIds))));
+  const invalidFeed = age < 5 && source.feed.some((entry) => INVALID_YOUNG_CHILD_CHOICE_TITLES.has(entry.title));
+
+  if (!focusChanged && !staleParentRelationship && !invalidThread && !invalidEvent && !invalidFeed) return source;
+
+  const world = clone(source);
+  const actor = world.characters[world.playerCharacterId];
+  actor.focuses = normalizedFocuses;
+
+  if (age < 8) {
+    for (const parentId of actor.parentIds) {
+      const relationship = relationshipWith(world, actor.id, parentId);
+      if (relationship) relationship.lastInteractionWeek = world.calendar.week;
+    }
+
+    for (const [id, memory] of Object.entries(world.memories)) {
+      if (memory.unresolved && memory.category === 'Thread · Relationship' && memory.participantIds.some((participantId) => actor.parentIds.includes(participantId))) {
+        delete world.memories[id];
+      }
+    }
+  }
+
+  world.events = world.events.filter((event) => {
+    if (event.resolved || !YOUNG_CHILD_RELATIONSHIP_EVENT_TEMPLATES.has(event.templateId)) return true;
+    if (age < 5) return false;
+    if (age < 8 && isParentRelationshipEvent(world, event.participantIds)) return false;
+    return true;
+  });
+
+  if (age < 5) {
+    world.feed = world.feed.filter((entry) => !INVALID_YOUNG_CHILD_CHOICE_TITLES.has(entry.title));
+    world.timeline = world.timeline.filter((entry) => !INVALID_YOUNG_CHILD_CHOICE_TITLES.has(entry.title));
+    for (const [id, memory] of Object.entries(world.memories)) {
+      if (memory.category.startsWith('Decision · relationship.reconnect') || memory.category.startsWith('Decision · story.family-reach-out')) delete world.memories[id];
+    }
+  }
+
+  return world;
+}
+
 /**
  * Runs before the older simulation layers. Young children do not "forget" to
  * prioritize a parent or accidentally create a stale-contact thread; caregiver
@@ -53,7 +118,7 @@ function caregiverAvailability(world: WorldState, parent: Character): { score: n
  * more of their social life.
  */
 export function prepareAgeProgressionAdvance(_before: WorldState, after: WorldState): WorldState {
-  const world = clone(after);
+  const world = normalizeAgeProgressionState(clone(after));
   const actor = world.characters[world.playerCharacterId];
   if (!actor) return world;
   const age = playerAgeYears(world);
@@ -71,8 +136,8 @@ export function prepareAgeProgressionAdvance(_before: WorldState, after: WorldSt
 /** Applies caregiver-driven childhood relationship consequences and age gates. */
 export function applyAgeProgressionAdvance(before: WorldState, after: WorldState): WorldState {
   const weeks = Math.max(0, after.calendar.week - before.calendar.week);
-  if (weeks <= 0) return after;
-  const world = clone(after);
+  if (weeks <= 0) return normalizeAgeProgressionState(after);
+  const world = normalizeAgeProgressionState(clone(after));
   const actor = world.characters[world.playerCharacterId];
   if (!actor) return world;
   const age = playerAgeYears(world);
@@ -113,5 +178,5 @@ export function applyAgeProgressionAdvance(before: WorldState, after: WorldState
     recordHistory(world, 'life', 'Driving is coming up', 'You can start driver training now and be ready at 16.', { subjectIds: [actor.id], importance: 3 });
   }
 
-  return world;
+  return normalizeAgeProgressionState(world);
 }
