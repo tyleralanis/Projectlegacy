@@ -57,32 +57,32 @@ export function developmentPrioritiesForAge(age: number): DevelopmentPriority[] 
   ];
   if (age < 5) return [
     { title: 'Letters and numbers', detail: 'Alphabet, counting, shapes, and basic patterns.' },
-    { title: 'Play with other kids', detail: 'Sharing, taking turns, and learning how friendships work.' },
+    { title: 'Play with other kids', detail: 'Sharing, taking turns, and making friends.' },
     { title: 'Get ready for school', detail: 'Attention, routines, language, and curiosity.' },
   ];
   if (age < 8) return [
-    { title: 'Reading and math', detail: 'The basics start compounding fast now.' },
-    { title: 'School habits', detail: 'Showing up, listening, finishing work, and asking questions.' },
-    { title: 'Friends and interests', detail: 'Sports, art, games, clubs, and the first real social circle.' },
+    { title: 'Reading and math', detail: 'Practice the basics.' },
+    { title: 'School habits', detail: 'Listen, finish work, and ask questions.' },
+    { title: 'Friends and interests', detail: 'Sports, art, games, clubs, and friends.' },
   ];
   if (age < 12) return [
-    { title: 'School', detail: 'Grades and learning habits are starting to matter.' },
+    { title: 'School', detail: 'Grades and learning habits matter more now.' },
     { title: 'Find your thing', detail: 'Sports, music, art, building, gaming, or whatever sticks.' },
     { title: 'Keep good people close', detail: 'Family and friendships are becoming more two-way.' },
   ];
   if (age < 15) return [
     { title: 'Build useful skills', detail: 'School, sports, hobbies, and social confidence.' },
-    { title: 'More independence', detail: 'Your choices carry more weight than they used to.' },
+    { title: 'More independence', detail: 'You are handling more on your own.' },
     { title: 'Think ahead', detail: 'Work, college, trades, and adult life are getting closer.' },
   ];
   if (age < 16) return [
-    { title: 'Start learning to drive', detail: 'Begin training now so you can be ready at 16.' },
+    { title: 'Start learning to drive', detail: 'Start now so you can be ready at 16.' },
     { title: 'School and future plans', detail: 'Grades, skills, college, trades, or work.' },
     { title: 'Handle more yourself', detail: 'Money, time, friendships, and responsibility.' },
   ];
   if (age < 18) return [
-    { title: 'Driving and mobility', detail: 'A license changes where work, school, and friends can take you.' },
-    { title: 'First real work', detail: 'Earn, save, and start building experience.' },
+    { title: 'Driving and mobility', detail: 'A license opens up work, school, and more independence.' },
+    { title: 'First real work', detail: 'Earn, save, and build experience.' },
     { title: 'Plan what comes next', detail: 'College, training, work, moving out, or another path.' },
   ];
   return [];
