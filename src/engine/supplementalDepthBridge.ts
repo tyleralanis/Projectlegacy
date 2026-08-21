@@ -5,6 +5,7 @@ import { normalizeDelegatedWorld } from './delegationNormalize';
 import { executeSecondarySchoolApplication } from './educationApplicationBridge';
 import { applyLegalPolish } from './legalPolish';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
+import { applyNarrativeDepth } from './narrativeDepth';
 import { executeRebalancePolish } from './rebalancePolish';
 import {
   applySupplementalAdvance as applyBaseSupplementalAdvance,
@@ -55,7 +56,9 @@ export function executeSupplementalDepth(
  * Renewal state is prepared before the older supplemental pass so legacy
  * expiry logic sees a paid-forward membership. Base systems then run once,
  * followed by recurring life systems, owner/manager delegation, existing-
- * system economic polish, cross-life continuity, and legal-case progression.
+ * system economic polish, cross-life continuity, legal-case progression, and
+ * the narrative layer that turns those system changes into persistent stories,
+ * callbacks, ordinary-life texture, and proactive NPC initiative.
  */
 export function applySupplementalAdvance(before: WorldState, after: WorldState): WorldState {
   const prepared = prepareDelegationAdvance(before, after);
@@ -64,5 +67,6 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
   const delegated = applyDelegationAdvance(before, life);
   const polished = applySystemPolishAdvance(before, delegated);
   const continuous = applyContinuityPolish(before, polished);
-  return applyLegalPolish(before, continuous);
+  const legal = applyLegalPolish(before, continuous);
+  return applyNarrativeDepth(before, legal);
 }
