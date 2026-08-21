@@ -10,6 +10,7 @@ export const LIFE_SYSTEM_ACTION_CATALOG: ActionDefinition[] = [
   { id: 'health.cancel_gym_membership', domain: 'health', label: 'Cancel gym membership', summary: 'End the annual auto-renewing gym membership without a refund for time already used.' },
   { id: 'property.screen_tenant', domain: 'property', label: 'Screen a tenant', summary: 'Turn vacancy into a persistent tenant relationship rather than an anonymous occupancy flag.' },
   { id: 'property.repair', domain: 'property', label: 'Repair property', summary: 'Spend cash to improve condition, value, and the tenant relationship together.' },
+  { id: 'property.pay_principal', domain: 'property', label: 'Pay mortgage principal', summary: 'Pay down or fully pay off property debt using available liquid cash.' },
   { id: 'property.develop', domain: 'property', label: 'Develop land', summary: 'Commit capital and carrying costs to turn an owned land parcel into an operating multifamily or commercial asset.' },
   { id: 'property.manage_portfolio', domain: 'property', label: 'Hire portfolio manager', summary: 'Put every owned property under one manager whose fee scales with the rental portfolio.' },
   { id: 'property.end_management', domain: 'property', label: 'End portfolio management', summary: 'Return the whole property portfolio to self-management and stop management fees.' },
