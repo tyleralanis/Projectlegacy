@@ -1,3 +1,4 @@
+import { executeAgeActionGate } from './ageActionGate';
 import { applyAgeProgressionAdvance, prepareAgeProgressionAdvance } from './ageProgressionWorld';
 import { executeCareerApplication } from './careerApplicationBridge';
 import { applyContinuityPolish } from './continuityPolish';
@@ -27,17 +28,13 @@ export function normalizeSupplementalState(source: WorldState): WorldState {
   return normalizeDelegatedWorld(normalizeBaseSupplementalState(source));
 }
 
-/**
- * OTA-safe extension point for life systems that were added after the original
- * supplemental engine grew large. Existing verbs that needed better economics
- * or consequence modeling are intercepted first; no new menu-only duplicate
- * actions are required for the polish pass.
- */
 export function executeSupplementalDepth(
   source: WorldState,
   action: IntentAction,
   confirmed = false,
 ): ActionResult | null {
+  const ageGate = executeAgeActionGate(source, action);
+  if (ageGate) return ageGate;
   const rebalance = executeRebalancePolish(source, action);
   if (rebalance) return rebalance;
   const polished = executeSystemPolishAction(source, action);
@@ -53,11 +50,7 @@ export function executeSupplementalDepth(
   return executeBaseSupplementalDepth(source, action, confirmed);
 }
 
-/**
- * Young-child priorities and caregiver contact are normalized before the older
- * simulation layers run. That prevents a toddler from accidentally creating an
- * adult relationship problem simply because "Family" was not manually picked.
- */
+/** Young children do not create adult priority or relationship problems. */
 export function applySupplementalAdvance(before: WorldState, after: WorldState): WorldState {
   const aged = prepareAgeProgressionAdvance(before, after);
   const prepared = prepareDelegationAdvance(before, aged);
