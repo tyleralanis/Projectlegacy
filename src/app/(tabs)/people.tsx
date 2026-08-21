@@ -14,12 +14,12 @@ import { radius, spacing, useAppTheme } from '@/ui/theme';
 type Group = 'family' | 'friends' | 'dating' | 'acquaintances' | 'professional' | 'rivals';
 
 const groups: { id: Group; icon: string; title: string; subtitle: string; minimumAge?: number }[] = [
-  { id: 'family', icon: '🏡', title: 'Family', subtitle: 'Parents, siblings, children, relatives, and the people who remember everything.' },
-  { id: 'friends', icon: '🫶', title: 'Friends', subtitle: 'The people you chose and somehow kept around.' },
+  { id: 'family', icon: '🏡', title: 'Family', subtitle: 'Parents, siblings, children, and relatives.' },
+  { id: 'friends', icon: '🫶', title: 'Friends', subtitle: 'The people you choose to keep around.', minimumAge: 3 },
   { id: 'dating', icon: '💘', title: 'Dating & partners', subtitle: 'Dates, partners, spouses, and relationship decisions.', minimumAge: 16 },
-  { id: 'acquaintances', icon: '👋', title: 'Acquaintances', subtitle: 'People you met through school, activities, work, or random circumstance.', minimumAge: 5 },
-  { id: 'professional', icon: '🤝', title: 'Professional network', subtitle: 'Coworkers, bankers, advisors, executives, and useful—or dangerous—connections.', minimumAge: 14 },
-  { id: 'rivals', icon: '⚡', title: 'Rivals', subtitle: 'People who would probably enjoy seeing you trip over something.', minimumAge: 5 },
+  { id: 'acquaintances', icon: '👋', title: 'Acquaintances', subtitle: 'People from school, activities, work, or ordinary life.', minimumAge: 5 },
+  { id: 'professional', icon: '🤝', title: 'Professional network', subtitle: 'Coworkers, advisors, executives, and useful connections.', minimumAge: 14 },
+  { id: 'rivals', icon: '⚡', title: 'Rivals', subtitle: 'People you do not get along with.', minimumAge: 5 },
 ];
 
 function relationshipStatus(trust: number, affection: number, resentment: number): string {
@@ -73,9 +73,15 @@ export default function PeopleScreen() {
         <Pressable onPress={() => setSelected(null)} style={[styles.back, { backgroundColor: colors.secondary }]}><Text style={[styles.backText, { color: colors.text }]}>‹ People</Text></Pressable>
         <View style={styles.header}><Eyebrow>{definition.icon} {definition.title.toUpperCase()}</Eyebrow><Heading size="large">{definition.title}</Heading><Body secondary>{definition.subtitle}</Body></View>
         <View style={styles.section}>
-          {shown.length === 0 ? <Card><Heading size="small">Nobody here yet</Heading><Body secondary>{age < 18 ? 'School, family, activities, and ordinary life will keep putting new people in your orbit.' : 'The world keeps generating people through school, work, wellness, organizations, family, and ordinary life.'}</Body></Card> : shown.map(({ relationship, person, kind }) => {
+          {shown.length === 0 ? <Card><Heading size="small">Nobody here yet</Heading><Body secondary>Life will put more people in your orbit over time.</Body></Card> : shown.map(({ relationship, person, kind }) => {
             const portrait = relationshipPortrait(world, person.id);
             const need = relationshipNeed(world, person.id);
+            const caregiverManaged = age < 8 && kind === 'parent';
+            const sameHousehold = person.householdId === actor.householdId;
+            const parentCareer = Object.values(world.careers).find((career) => career.characterId === person.id && career.active);
+            const parentBusy = Boolean(parentCareer && ((parentCareer.hoursPerWeek ?? 40) >= 50 || person.focuses.includes('Job')));
+            const caregiverTitle = !sameHousehold ? 'Living apart' : parentBusy ? 'Work takes some of their time' : 'Present day-to-day';
+            const caregiverDetail = !sameHousehold ? 'Living in different households can limit everyday time together.' : parentBusy ? 'Their work schedule affects how available they are.' : 'They are around and handling the everyday care.';
             return (
               <Card key={relationship.id}>
                 <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{person.firstName} {person.lastName}</Heading><Body secondary>{kind} · age {ageOf(world.calendar.week, person.birthWeek)} · {relationshipStatus(relationship.trust, relationship.affection, relationship.resentment)}</Body></View><StatusPill tone={person.isAlive ? 'success' : 'neutral'}>{person.isAlive ? 'Around' : 'Remembered'}</StatusPill></View>
@@ -84,21 +90,21 @@ export default function PeopleScreen() {
                 <View style={styles.lifeBlock}><Eyebrow>THEIR LIFE RIGHT NOW</Eyebrow><Body secondary>{portrait.currentLife}</Body></View>
                 <View style={styles.traitWrap}>{portrait.traits.map((trait) => <StatusPill key={trait} tone="neutral">{trait}</StatusPill>)}</View>
 
-                <View style={[styles.need, { backgroundColor: colors.secondary }]}><View style={{ flex: 1, gap: 3 }}><Eyebrow>WHAT THIS RELATIONSHIP NEEDS</Eyebrow><Body>{need.title}</Body><Body secondary>{need.detail}</Body></View></View>
+                {caregiverManaged ? <View style={[styles.need, { backgroundColor: colors.secondary }]}><View style={{ flex: 1, gap: 3 }}><Eyebrow>CAREGIVER ROLE</Eyebrow><Body>{caregiverTitle}</Body><Body secondary>{caregiverDetail}</Body><Body secondary>This is mostly shaped by what they do right now, not by a priority you pick.</Body></View></View> : <View style={[styles.need, { backgroundColor: colors.secondary }]}><View style={{ flex: 1, gap: 3 }}><Eyebrow>WHAT THIS RELATIONSHIP NEEDS</Eyebrow><Body>{need.title}</Body><Body secondary>{need.detail}</Body></View></View>}
 
-                <View style={styles.metrics}>
+                {!caregiverManaged ? <View style={styles.metrics}>
                   <View style={styles.metric}><View style={styles.row}><Body>Trust</Body><Body secondary>{Math.round(relationship.trust)}</Body></View><ProgressBar value={relationship.trust} /></View>
                   <View style={styles.metric}><View style={styles.row}><Body>Affection</Body><Body secondary>{Math.round(relationship.affection)}</Body></View><ProgressBar value={relationship.affection} tone="legacy" /></View>
                   <View style={styles.metric}><View style={styles.row}><Body>Resentment</Body><Body secondary>{Math.round(relationship.resentment)}</Body></View><ProgressBar value={relationship.resentment} tone="danger" /></View>
-                </View>
+                </View> : null}
 
                 <View style={styles.lifeBlock}>
-                  <View style={styles.row}><Eyebrow>SHARED HISTORY</Eyebrow><Body secondary>Last real interaction {weeksAgo(world.calendar.week, relationship.lastInteractionWeek)}</Body></View>
-                  {portrait.recentSharedHistory.length === 0 ? <Body secondary>Nothing major is written into the relationship yet. Most of the story is still ordinary time together—or apart.</Body> : portrait.recentSharedHistory.slice(0, 3).map((memory, index) => <Body key={`${person.id}-memory-${index}`} secondary>• {memory}</Body>)}
+                  <View style={styles.row}><Eyebrow>SHARED HISTORY</Eyebrow>{!caregiverManaged ? <Body secondary>Last real interaction {weeksAgo(world.calendar.week, relationship.lastInteractionWeek)}</Body> : null}</View>
+                  {portrait.recentSharedHistory.length === 0 ? <Body secondary>{caregiverManaged ? 'Most of the relationship is still everyday care and time together.' : 'Nothing major is written into the relationship yet.'}</Body> : portrait.recentSharedHistory.slice(0, 3).map((memory, index) => <Body key={`${person.id}-memory-${index}`} secondary>• {memory}</Body>)}
                 </View>
 
-                {person.isAlive ? <>
-                  <Pressable onPress={() => router.push({ pathname: '/relationship', params: { personId: person.id } } as never)} style={({ pressed }) => [styles.focusButton, { backgroundColor: colors.accentSoft, borderColor: colors.accent, opacity: pressed ? 0.74 : 1 }]}><View style={{ flex: 1 }}><Heading size="small">Open the relationship</Heading><Body secondary>Spend time, repair conflict, make promises, support goals, handle money, family, romance, inheritance, and the story between you.</Body></View><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></Pressable>
+                {person.isAlive && !caregiverManaged ? <>
+                  <Pressable onPress={() => router.push({ pathname: '/relationship', params: { personId: person.id } } as never)} style={({ pressed }) => [styles.focusButton, { backgroundColor: colors.accentSoft, borderColor: colors.accent, opacity: pressed ? 0.74 : 1 }]}><View style={{ flex: 1 }}><Heading size="small">Open the relationship</Heading><Body secondary>Spend time, repair conflict, support goals, or handle bigger decisions.</Body></View><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></Pressable>
                   <View style={styles.actions}>
                     <EngineActionButton title={age < 13 ? 'Talk' : 'Reach out'} action={{ verb: 'relationship.contact', targetIds: [person.id], parameters: {} }} style={{ flex: 1 }} />
                     <EngineActionButton title="Spend time" action={{ verb: 'relationship.spend_time', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} />
@@ -115,7 +121,7 @@ export default function PeopleScreen() {
 
   return (
     <AppScreen>
-      <View style={styles.header}><Eyebrow>{age < 13 ? 'YOUR PEOPLE' : 'THE PEOPLE IN YOUR MESS'}</Eyebrow><Heading size="large">People</Heading><Body secondary>{age < 13 ? 'Family and friends shape a surprising amount of who you are before you get much say in anything else.' : 'Family, friends, dates, acquaintances, coworkers, rivals, and everyone who remembers what you did twenty years ago.'}</Body></View>
+      <View style={styles.header}><Eyebrow>{age < 13 ? 'YOUR PEOPLE' : 'PEOPLE'}</Eyebrow><Heading size="large">People</Heading><Body secondary>{age < 8 ? 'The adults around you still shape most of your social world.' : 'Family, friends, partners, coworkers, acquaintances, and rivals.'}</Body></View>
       <Card accent><SectionHeader title={`${world.dynasty.familyName} family`} action={<StatusPill tone="warning">Generation {world.dynasty.generation}</StatusPill>} /><Body>{actor.parentIds.length} parents · {actor.childIds.length} children · {age >= 16 ? (actor.partnerId ? 'Partnered' : 'Single') : 'Still growing up'}</Body></Card>
 
       <View style={styles.section}>
@@ -127,7 +133,7 @@ export default function PeopleScreen() {
 
       <View style={styles.section}>
         <SectionHeader title="Important memories" action={<StatusPill>{Object.keys(world.memories).length}</StatusPill>} />
-        {Object.values(world.memories).length === 0 ? <Card><Body secondary>{age < 10 ? 'Nothing dramatic has stuck yet. Give it time.' : 'Nothing major has stuck yet.'}</Body></Card> : Object.values(world.memories).sort((left, right) => right.week - left.week).slice(0, 6).map((memory) => <Card key={memory.id}><View style={styles.row}><Heading size="small">{memory.category}</Heading><StatusPill tone={memory.unresolved ? 'warning' : 'neutral'}>{memory.unresolved ? 'Still matters' : 'Remembered'}</StatusPill></View><Body>{memory.narrative}</Body><Eyebrow>IMPORTANCE {Math.round(memory.importance)}</Eyebrow></Card>)}
+        {Object.values(world.memories).length === 0 ? <Card><Body secondary>Nothing major has stuck yet.</Body></Card> : Object.values(world.memories).sort((left, right) => right.week - left.week).slice(0, 6).map((memory) => <Card key={memory.id}><View style={styles.row}><Heading size="small">{memory.category}</Heading><StatusPill tone={memory.unresolved ? 'warning' : 'neutral'}>{memory.unresolved ? 'Still matters' : 'Remembered'}</StatusPill></View><Body>{memory.narrative}</Body><Eyebrow>IMPORTANCE {Math.round(memory.importance)}</Eyebrow></Card>)}
       </View>
     </AppScreen>
   );

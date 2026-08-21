@@ -51,6 +51,12 @@ export function holdingValueCents(world: WorldState, ownerId: string): MoneyCent
     }, 0);
 }
 
+export function personalAssetValueCents(world: WorldState, ownerId: string): MoneyCents {
+  return Object.values(world.personalAssets ?? {})
+    .filter((asset) => asset.ownerId === ownerId)
+    .reduce((total, asset) => total + asset.valueCents, 0);
+}
+
 export function netWorthCents(world: WorldState, characterId = world.playerCharacterId): MoneyCents {
   const character = world.characters[characterId];
   if (!character) return 0;
@@ -63,5 +69,5 @@ export function netWorthCents(world: WorldState, characterId = world.playerChara
   const liabilities = Object.values(world.liabilities)
     .filter((liability) => liability.debtorId === characterId && !liability.securedById)
     .reduce((total, liability) => total + liability.principalCents, 0);
-  return clampCents(character.cashCents + propertyEquity + businessEquity + holdingValueCents(world, characterId) - liabilities);
+  return clampCents(character.cashCents + propertyEquity + businessEquity + holdingValueCents(world, characterId) + personalAssetValueCents(world, characterId) - liabilities);
 }

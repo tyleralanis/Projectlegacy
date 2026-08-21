@@ -1,3 +1,5 @@
+import { executeAgeActionGate } from './ageActionGate';
+import { applyAgeProgressionAdvance, normalizeAgeProgressionState, prepareAgeProgressionAdvance } from './ageProgressionWorld';
 import { executeCareerApplication } from './careerApplicationBridge';
 import { applyContinuityPolish } from './continuityPolish';
 import { applyDelegationAdvance, executeDelegationDepth, prepareDelegationAdvance } from './delegationDepth';
@@ -7,6 +9,7 @@ import { applyFinanceEducationAdvance, executeFinanceEducationPolish, normalizeF
 import { applyLegalPolish } from './legalPolish';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
 import { applyNarrativeDepth } from './narrativeDepth';
+import { executePropertyPolishAction } from './propertyPolishActions';
 import { executeRebalancePolish } from './rebalancePolish';
 import {
   applySupplementalAdvance as applyBaseSupplementalAdvance,
@@ -19,25 +22,31 @@ import {
 import { applySystemPolishAdvance } from './systemPolish';
 import { executeSystemPolishAction } from './systemPolishActions';
 import type { ActionResult, IntentAction, WorldState } from './types';
+import { applyWealthLifestyleAdvance, executeWealthLifestyleAction, normalizeWealthLifestyleState } from './wealthLifestyle';
 
 export { ceoCandidates, getTuitionBalance, hasGymMembership };
 export { businessRunwayReserveCents, distributableBusinessCashCents, portfolioManagementFeeWeeklyCents, propertyManagerActive } from './delegationDepth';
+export { hasActiveLicense, licenseFor } from './wealthLifestyle';
 
 export function normalizeSupplementalState(source: WorldState): WorldState {
-  return normalizeDelegatedWorld(normalizeFinanceEducationState(normalizeBaseSupplementalState(source)));
+  const base = normalizeBaseSupplementalState(source);
+  const financed = normalizeFinanceEducationState(base);
+  const delegated = normalizeDelegatedWorld(financed);
+  const lifestyle = normalizeWealthLifestyleState(delegated);
+  return normalizeAgeProgressionState(lifestyle);
 }
 
-/**
- * OTA-safe extension point for life systems that were added after the original
- * supplemental engine grew large. Existing verbs that needed better economics
- * or consequence modeling are intercepted first; no new menu-only duplicate
- * actions are required for the polish pass.
- */
 export function executeSupplementalDepth(
   source: WorldState,
   action: IntentAction,
   confirmed = false,
 ): ActionResult | null {
+  const ageGate = executeAgeActionGate(source, action);
+  if (ageGate) return ageGate;
+  const lifestyle = executeWealthLifestyleAction(source, action);
+  if (lifestyle) return lifestyle;
+  const property = executePropertyPolishAction(source, action);
+  if (property) return property;
   const financeEducation = executeFinanceEducationPolish(source, action, confirmed);
   if (financeEducation) return financeEducation;
   const rebalance = executeRebalancePolish(source, action);
@@ -55,21 +64,18 @@ export function executeSupplementalDepth(
   return executeBaseSupplementalDepth(source, action, confirmed);
 }
 
-/**
- * Renewal state is prepared before the older supplemental pass so legacy
- * expiry logic sees a paid-forward membership. Base systems then run once,
- * followed by recurring life systems, owner/manager delegation, existing-
- * system economic polish, cross-life continuity, legal-case progression,
- * finance/education normalization, and the narrative layer.
- */
+/** Young children do not create adult priority or relationship problems. */
 export function applySupplementalAdvance(before: WorldState, after: WorldState): WorldState {
-  const prepared = prepareDelegationAdvance(before, after);
+  const aged = prepareAgeProgressionAdvance(before, after);
+  const prepared = prepareDelegationAdvance(before, aged);
   const base = applyBaseSupplementalAdvance(before, prepared);
-  const life = applyLifeSystemsAdvance(before, base);
+  const ageProgressed = applyAgeProgressionAdvance(before, base);
+  const lifestyle = applyWealthLifestyleAdvance(before, ageProgressed);
+  const life = applyLifeSystemsAdvance(before, lifestyle);
   const delegated = applyDelegationAdvance(before, life);
   const polished = applySystemPolishAdvance(before, delegated);
   const continuous = applyContinuityPolish(before, polished);
   const legal = applyLegalPolish(before, continuous);
   const financed = applyFinanceEducationAdvance(before, legal);
-  return applyNarrativeDepth(before, financed);
+  return normalizeAgeProgressionState(applyNarrativeDepth(before, financed));
 }
