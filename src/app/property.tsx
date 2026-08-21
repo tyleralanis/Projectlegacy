@@ -99,7 +99,7 @@ export default function PropertyScreen() {
           const development = Object.values(world.memories).find((memory) => memory.category.startsWith(`Property · Development · ${property.id} ·`) && memory.unresolved);
           const multiCost = Math.max(10_000_000, Math.round(property.valueCents * 0.58));
           const commercialCost = Math.max(10_000_000, Math.round(property.valueCents * 0.72));
-          const renovationOptions = renovationOptionsForProperty(property);
+          const renovationOptions = renovationOptionsForProperty(property, world);
           return (
             <Card key={property.id}>
               <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading>{property.name}</Heading><Body secondary>{property.kind} · {property.occupancy} · {property.managed || managerActive ? 'professionally managed' : 'self-managed'}</Body></View><StatusPill tone={equity >= 0 ? 'success' : 'danger'}>{formatMoney(equity, true)} equity</StatusPill></View>
