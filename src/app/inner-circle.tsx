@@ -5,6 +5,7 @@ import { EngineActionButton } from '@/components/EngineActionButton';
 import { SubviewHeader } from '@/components/MenuTile';
 import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { innerCircleProfile } from '@/engine/factionDepth';
+import { factionCadenceStatus } from '@/engine/factionPolish';
 import { formatMoney } from '@/engine/money';
 import { useGame } from '@/state/GameProvider';
 import { AppScreen, Body, Card, Heading, ProgressBar, SectionHeader, Stat, StatusPill } from '@/ui/components';
@@ -34,6 +35,10 @@ function readiness(profile: NonNullable<ReturnType<typeof innerCircleProfile>>, 
   );
 }
 
+function readyLabel(weeks: number): string {
+  return weeks <= 0 ? 'Ready' : `${weeks}w`;
+}
+
 export default function InnerCircleScreen() {
   const { world } = useGame();
   if (!world) return null;
@@ -50,6 +55,7 @@ export default function InnerCircleScreen() {
   }
 
   const organization = world.organizations[profile.organizationId];
+  const cadence = factionCadenceStatus(world)!;
   const country = world.countries[world.activeCountryId];
   const resistance = Math.min(100, country.stability * 0.34 + country.ruleOfLaw * 0.36 + country.marketAccess * 0.08 + country.educationIndex * 0.07 + 10);
   const movementReadiness = readiness(profile, actor.reputation.faction);
@@ -67,11 +73,12 @@ export default function InnerCircleScreen() {
   const eligiblePluralPartners = followers
     .filter((person) => ageOf(world.calendar.week, person.birthWeek) >= 18 && !spouseIds.has(person.id) && person.id !== actor.partnerId)
     .slice(0, 4);
-  const history = organization.history.filter((entry) => !entry.startsWith('inner-circle:') && !entry.startsWith('milestone:')).slice(-8).reverse();
+  const history = organization.history.filter((entry) => !entry.startsWith('inner-circle:') && !entry.startsWith('milestone:') && !entry.startsWith('capacity-warning-snooze:')).slice(-8).reverse();
   const isReligious = profile.archetype === 'religious';
   const isMilitary = profile.archetype === 'military';
   const isPolitical = profile.archetype === 'political';
   const isCommunal = profile.archetype === 'communal';
+  const cashOutEstimate = Math.max(0, Math.round(profile.resourcesCents * 0.82));
 
   return (
     <AppScreen>
@@ -111,18 +118,31 @@ export default function InnerCircleScreen() {
       </View> : null}
 
       <View style={styles.section}>
+        <SectionHeader title="Leadership cadence" />
+        <Card>
+          <View style={styles.stats}>
+            <Stat label="Outreach" value={readyLabel(cadence.recruitInWeeks)} tone={cadence.recruitInWeeks === 0 ? 'success' : 'default'} />
+            <Stat label="Gathering" value={readyLabel(cadence.gatheringInWeeks)} tone={cadence.gatheringInWeeks === 0 ? 'success' : 'default'} />
+            <Stat label="Fund drive" value={readyLabel(cadence.fundraisingInWeeks)} tone={cadence.fundraisingInWeeks === 0 ? 'success' : 'default'} />
+            <Stat label="Fundraising fatigue" value={`${Math.round(cadence.fundraisingFatigue)}%`} tone={cadence.fundraisingFatigue >= 55 ? 'danger' : 'default'} />
+          </View>
+          <Body secondary>A movement cannot absorb unlimited button presses in one week. Recruitment, doctrine, and public outreach share one weekly outreach window. Gatherings and member support can each happen once per week. Movement-wide contribution drives are spaced four weeks apart, and repeated fundraising becomes less productive until fatigue fades.</Body>
+        </Card>
+      </View>
+
+      <View style={styles.section}>
         <SectionHeader title="Grow the movement" />
         <Card>
           <View style={styles.actions}>
-            <EngineActionButton title="Recruit followers" action={{ verb: 'faction.recruit', targetIds: [profile.organizationId], parameters: {} }} tone="accent" style={styles.button} />
-            <EngineActionButton title="Hold a gathering · $250" action={{ verb: 'faction.hold_gathering', targetIds: [profile.organizationId], parameters: { amountCents: 25_000 } }} style={styles.button} />
+            <EngineActionButton title={`Recruit followers · ~${cadence.recruitmentEstimate}`} action={{ verb: 'faction.recruit', targetIds: [profile.organizationId], parameters: {} }} tone="accent" style={styles.button} />
+            <EngineActionButton title={`Hold gathering · ${formatMoney(cadence.gatheringCostCents, true)}`} action={{ verb: 'faction.hold_gathering', targetIds: [profile.organizationId], parameters: {} }} style={styles.button} />
             <EngineActionButton title="Collect contributions" action={{ verb: 'faction.collect_contributions', targetIds: [profile.organizationId], parameters: { pressure: 'normal' } }} style={styles.button} />
             <EngineActionButton title="Pressure for more money" action={{ verb: 'faction.collect_contributions', targetIds: [profile.organizationId], parameters: { pressure: 'aggressive' } }} tone="danger" style={styles.button} />
             <EngineActionButton title="Public influence · $3k" action={{ verb: 'faction.expand_public_influence', targetIds: [profile.organizationId], parameters: { amountCents: 300_000 } }} style={styles.button} />
-            <EngineActionButton title="Member support · $2.5k" action={{ verb: 'faction.member_welfare', targetIds: [profile.organizationId], parameters: { amountCents: 250_000 } }} style={styles.button} />
+            <EngineActionButton title={`Member support · ${formatMoney(cadence.welfareCostCents, true)}`} action={{ verb: 'faction.member_welfare', targetIds: [profile.organizationId], parameters: {} }} style={styles.button} />
             {!profile.landOwned ? <EngineActionButton title="Buy movement land · $50k" action={{ verb: 'faction.buy_land', targetIds: [profile.organizationId], parameters: { amountCents: 5_000_000 } }} style={styles.button} /> : null}
           </View>
-          <Body secondary>Pressuring members for money produces more resources faster, but lowers devotion, cohesion, and public legitimacy and creates persistent exposure risk.</Body>
+          <Body secondary>Recruitment reach grows with the size, influence, public standing, and charisma of the movement instead of producing the same oversized batch at every scale. Growing faster than the culture can absorb people costs cohesion. Pressuring members for money pays more, but sharply increases fatigue, internal damage, and persistent exposure risk.</Body>
         </Card>
       </View>
 
@@ -174,6 +194,18 @@ export default function InnerCircleScreen() {
           const relationship = Object.values(world.relationships).find((item) => item.characterIds.includes(actor.id) && item.characterIds.includes(person.id));
           return <Card key={person.id}><View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">{person.firstName} {person.lastName}</Heading><Body secondary>Age {ageOf(world.calendar.week, person.birthWeek)} · faction reputation {Math.round(person.reputation.faction)}</Body></View><StatusPill tone={(relationship?.trust ?? 0) >= 60 ? 'success' : 'neutral'}>{relationship ? `Trust ${Math.round(relationship.trust)}` : 'Follower'}</StatusPill></View></Card>;
         })}
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader title="Leadership & exit" />
+        <Card>
+          <Body secondary>Leaving hands the movement to a successor if one exists and damages cohesion because leadership changed. Ending the movement dissolves it and pays you nothing personally. Cashing out converts about 82% of liquid movement resources into personal cash, then fractures the organization: followers, devotion, cohesion, stability, and public standing fall sharply and the transaction can create persistent exposure.</Body>
+          <View style={styles.actions}>
+            <EngineActionButton title="Leave movement" action={{ verb: 'faction.leave', targetIds: [profile.organizationId], parameters: {}, destructive: true }} tone="warning" style={styles.button} />
+            <EngineActionButton title="End movement" action={{ verb: 'faction.dissolve', targetIds: [profile.organizationId], parameters: {}, destructive: true }} tone="danger" style={styles.button} />
+            <EngineActionButton title={`Cash out & leave · ~${formatMoney(cashOutEstimate, true)}`} action={{ verb: 'faction.cash_out', targetIds: [profile.organizationId], parameters: {}, destructive: true }} tone="danger" style={styles.button} />
+          </View>
+        </Card>
       </View>
 
       <View style={styles.section}>
