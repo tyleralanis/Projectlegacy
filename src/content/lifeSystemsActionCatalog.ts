@@ -2,6 +2,7 @@ import type { ActionDefinition } from './actionCatalog';
 
 export const LIFE_SYSTEM_ACTION_CATALOG: ActionDefinition[] = [
   { id: 'career.negotiate_hours', domain: 'career', label: 'Negotiate work hours', summary: 'Trade pay and career momentum for more weekly time, or commit more hours for stronger career momentum.' },
+  { id: 'education.ask_family_help', domain: 'education', label: 'Ask family for tuition help', summary: 'Ask living parents to contribute available cash toward the current college financing need.' },
   { id: 'health.sleep', domain: 'health', label: 'Protect sleep', summary: 'Give recovery real priority instead of treating exhaustion as free productivity.' },
   { id: 'health.nutrition', domain: 'health', label: 'Improve nutrition', summary: 'Spend money and attention on a more deliberate food routine with modest long-term health benefits.' },
   { id: 'health.checkup', domain: 'health', label: 'Get a checkup', summary: 'Use preventive care to monitor health pressure before it becomes a crisis.' },
