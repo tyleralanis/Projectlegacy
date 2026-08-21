@@ -1,3 +1,4 @@
+import { automaticFocusesForAge } from './ageProgression';
 import { generateFamilyOrigin } from './familyOrigin';
 import { seedToUint32 } from './random';
 import type { Character, ReputationAudience, WorldState } from './types';
@@ -47,7 +48,7 @@ export function createWorld(options: NewWorldOptions): WorldState {
   const player = character(playerId, firstName, lastName, 0, householdId, startAgeYears >= 18 ? origin.playerAdultCashCents : 0, {
     parentIds: [fatherId, motherId],
     childIds: [],
-    focuses: startAgeYears < 6 ? ['Family', 'Health', 'Creative Work'] : ['Academics', 'Family', 'Health'],
+    focuses: automaticFocusesForAge(startAgeYears),
     knowledge: startAgeYears >= 18 ? adultKnowledge : 5,
     stress: startAgeYears >= 18 ? adultStress : 8,
     mood: origin.climate === 'close' ? 74 : origin.climate === 'distant' ? 58 : 68,
@@ -79,7 +80,7 @@ export function createWorld(options: NewWorldOptions): WorldState {
   });
 
   const world: WorldState = {
-    metadata: { saveId: `save-${seedToUint32(options.seed).toString(16)}`, displayName: `${firstName} ${lastName} · Generation 1`, schemaVersion: 3, engineVersion: '0.1.0', contentVersion: '1.2.0', worldSeed: options.seed, createdAt: now, updatedAt: now, lastCheckpoint: now, generation: 1, nextSequence: 100 },
+    metadata: { saveId: `save-${seedToUint32(options.seed).toString(16)}`, displayName: `${firstName} ${lastName} · Generation 1`, schemaVersion: 3, engineVersion: '0.1.0', contentVersion: '1.3.0', worldSeed: options.seed, createdAt: now, updatedAt: now, lastCheckpoint: now, generation: 1, nextSequence: 100 },
     calendar: { week: currentWeek, dateISO: addWeeksISO('2008-01-07', currentWeek) },
     rngState: seedToUint32(options.seed), playerCharacterId: playerId,
     economy: { regime: 'steady', growth: 0.022, inflation: 0.024, policyRate: 0.038, housingIndex: 100, marketIndex: 100, unemployment: 0.049 },
@@ -115,7 +116,7 @@ export function createWorld(options: NewWorldOptions): WorldState {
     performance: { fullNpcLimit: WORLD_CONTENT.performance.fullNpcLimit, standardNpcLimit: WORLD_CONTENT.performance.standardNpcLimit, memoryLimit: WORLD_CONTENT.performance.memoryLimit, timelineLimit: WORLD_CONTENT.performance.timelineLimit, intentLogLimit: WORLD_CONTENT.performance.intentLogLimit },
     dynasty: { founderId: playerId, generation: 1, familyName: lastName, notableHistory: [`Family origin: ${origin.label}.`], successionPreference: 'player-choice' },
     settings: { hapticsEnabled: true, reducedMotion: false, enhancedAIEnabled: true, qualitativeRiskOnly: true, highContrast: false, autoDownloadUpdates: true, developerUnlocked: false },
-    advisors: {},
+    advisors: {}, personalAssets: {}, licenses: {},
   };
   return world;
 }
