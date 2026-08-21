@@ -65,7 +65,7 @@ const otaOnlyActions = new Set([
   'career.work_hard', 'career.network', 'career.train', 'career.seek_promotion', 'career.office_politics',
   'organization.found_inner_circle', 'faction.set_archetype', 'faction.recruit', 'faction.hold_gathering', 'faction.collect_contributions',
   'faction.buy_land', 'faction.spread_doctrine', 'faction.elevate_leader', 'faction.adopt_plural_household', 'faction.invite_plural_spouse',
-  'faction.build_security', 'faction.expand_public_influence', 'faction.member_welfare', 'faction.attempt_power_seizure',
+  'faction.build_security', 'faction.expand_public_influence', 'faction.member_welfare', 'faction.leave', 'faction.dissolve', 'faction.cash_out', 'faction.attempt_power_seizure',
 
   'skills.practice',
   'markets.private_deal',
@@ -86,6 +86,7 @@ const executorFiles = [
   path.join(root, 'src', 'engine', 'relationshipDepth.ts'),
   path.join(root, 'src', 'engine', 'trackDepth.ts'),
   path.join(root, 'src', 'engine', 'factionDepth.ts'),
+  path.join(root, 'src', 'engine', 'factionPolish.ts'),
   path.join(root, 'src', 'engine', 'deepSimulationActions.ts'),
   path.join(root, 'src', 'state', 'GameProvider.tsx'),
 ];
