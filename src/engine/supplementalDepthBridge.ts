@@ -21,12 +21,14 @@ import {
 import { applySystemPolishAdvance } from './systemPolish';
 import { executeSystemPolishAction } from './systemPolishActions';
 import type { ActionResult, IntentAction, WorldState } from './types';
+import { applyWealthLifestyleAdvance, executeWealthLifestyleAction, normalizeWealthLifestyleState } from './wealthLifestyle';
 
 export { ceoCandidates, getTuitionBalance, hasGymMembership };
 export { businessRunwayReserveCents, distributableBusinessCashCents, portfolioManagementFeeWeeklyCents, propertyManagerActive } from './delegationDepth';
+export { hasActiveLicense, licenseFor } from './wealthLifestyle';
 
 export function normalizeSupplementalState(source: WorldState): WorldState {
-  return normalizeDelegatedWorld(normalizeBaseSupplementalState(source));
+  return normalizeWealthLifestyleState(normalizeDelegatedWorld(normalizeBaseSupplementalState(source)));
 }
 
 export function executeSupplementalDepth(
@@ -36,6 +38,8 @@ export function executeSupplementalDepth(
 ): ActionResult | null {
   const ageGate = executeAgeActionGate(source, action);
   if (ageGate) return ageGate;
+  const lifestyle = executeWealthLifestyleAction(source, action);
+  if (lifestyle) return lifestyle;
   const property = executePropertyPolishAction(source, action);
   if (property) return property;
   const rebalance = executeRebalancePolish(source, action);
@@ -59,7 +63,8 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
   const prepared = prepareDelegationAdvance(before, aged);
   const base = applyBaseSupplementalAdvance(before, prepared);
   const ageProgressed = applyAgeProgressionAdvance(before, base);
-  const life = applyLifeSystemsAdvance(before, ageProgressed);
+  const lifestyle = applyWealthLifestyleAdvance(before, ageProgressed);
+  const life = applyLifeSystemsAdvance(before, lifestyle);
   const delegated = applyDelegationAdvance(before, life);
   const polished = applySystemPolishAdvance(before, delegated);
   const continuous = applyContinuityPolish(before, polished);
