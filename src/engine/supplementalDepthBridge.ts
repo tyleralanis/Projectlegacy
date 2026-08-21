@@ -1,3 +1,4 @@
+import { applyAgeProgressionAdvance, prepareAgeProgressionAdvance } from './ageProgressionWorld';
 import { executeCareerApplication } from './careerApplicationBridge';
 import { applyContinuityPolish } from './continuityPolish';
 import { applyDelegationAdvance, executeDelegationDepth, prepareDelegationAdvance } from './delegationDepth';
@@ -53,17 +54,16 @@ export function executeSupplementalDepth(
 }
 
 /**
- * Renewal state is prepared before the older supplemental pass so legacy
- * expiry logic sees a paid-forward membership. Base systems then run once,
- * followed by recurring life systems, owner/manager delegation, existing-
- * system economic polish, cross-life continuity, legal-case progression, and
- * the narrative layer that turns those system changes into persistent stories,
- * callbacks, ordinary-life texture, and proactive NPC initiative.
+ * Young-child priorities and caregiver contact are normalized before the older
+ * simulation layers run. That prevents a toddler from accidentally creating an
+ * adult relationship problem simply because "Family" was not manually picked.
  */
 export function applySupplementalAdvance(before: WorldState, after: WorldState): WorldState {
-  const prepared = prepareDelegationAdvance(before, after);
+  const aged = prepareAgeProgressionAdvance(before, after);
+  const prepared = prepareDelegationAdvance(before, aged);
   const base = applyBaseSupplementalAdvance(before, prepared);
-  const life = applyLifeSystemsAdvance(before, base);
+  const ageProgressed = applyAgeProgressionAdvance(before, base);
+  const life = applyLifeSystemsAdvance(before, ageProgressed);
   const delegated = applyDelegationAdvance(before, life);
   const polished = applySystemPolishAdvance(before, delegated);
   const continuous = applyContinuityPolish(before, polished);
