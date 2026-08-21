@@ -173,7 +173,7 @@ function ordinaryMomentCandidates(world: WorldState): MomentCandidate[] {
   } else if (stage === 'adult') {
     candidates.push(
       { key: 'adult-calendar', domain: 'life', title: 'The calendar starts telling the truth', detail: 'What matters in theory and what actually receives hours are not always the same thing. The difference is becoming visible.' },
-      { key: 'adult-compounding', domain: 'wealth', title: 'Old decisions are starting to compound', detail: 'Career choices, money habits, friendships, health, and family commitments increasingly carry momentum of their own.' },
+      { key: 'adult-compounding', domain: 'markets', title: 'Old decisions are starting to compound', detail: 'Career choices, money habits, friendships, health, and family commitments increasingly carry momentum of their own.' },
     );
   } else if (stage === 'established') {
     candidates.push(
@@ -267,13 +267,13 @@ function processEconomicWeather(before: WorldState, world: WorldState): void {
     upsertMemory(world, category, [actor.id], narrative, world.economy.regime === 'recession' ? 74 : 58, true, -0.25);
     if (before.economy.regime !== world.economy.regime) {
       actor.stress = clamp(actor.stress + Math.min(4, exposed * 0.6));
-      recordHistory(world, 'wealth', 'The economy changed the weather around your life', narrative, { subjectIds: [actor.id], importance: world.economy.regime === 'recession' ? 3 : 2 });
+      recordHistory(world, 'markets', 'The economy changed the weather around your life', narrative, { subjectIds: [actor.id], importance: world.economy.regime === 'recession' ? 3 : 2 });
     }
   } else {
     const existing = Object.values(world.memories).find((item) => item.category === category && item.unresolved);
     if (existing) {
       resolveArc(world, category, [actor.id], `The economy has moved into ${world.economy.regime}. The pressure did not vanish everywhere at once, but the broad environment stopped getting worse.`);
-      recordHistory(world, 'wealth', 'The economic pressure began to ease', `The economy moved into ${world.economy.regime}. Businesses, jobs, property, and markets can now recover at different speeds.`, { subjectIds: [actor.id], importance: 2 });
+      recordHistory(world, 'markets', 'The economic pressure began to ease', `The economy moved into ${world.economy.regime}. Businesses, jobs, property, and markets can now recover at different speeds.`, { subjectIds: [actor.id], importance: 2 });
     }
   }
 }
