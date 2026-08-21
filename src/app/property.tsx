@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EngineActionButton } from '@/components/EngineActionButton';
+import { MoneyAmountPicker } from '@/components/MoneyAmountPicker';
 import { SubviewHeader } from '@/components/MenuTile';
 import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { monthlyPropertyListings } from '@/content/lifeCatalogs';
@@ -19,6 +20,7 @@ export default function PropertyScreen() {
   const { world } = useGame();
   const { colors } = useAppTheme();
   const [mode, setMode] = useState<ViewMode>('browse');
+  const [principalAmounts, setPrincipalAmounts] = useState<Record<string, number>>({});
   if (!world) return null;
   const actor = world.characters[world.playerCharacterId];
   const city = WORLD_CONTENT.cities.find((item) => item.id === actor.cityId);
@@ -99,6 +101,9 @@ export default function PropertyScreen() {
           const development = Object.values(world.memories).find((memory) => memory.category.startsWith(`Property · Development · ${property.id} ·`) && memory.unresolved);
           const multiCost = Math.max(10_000_000, Math.round(property.valueCents * 0.58));
           const commercialCost = Math.max(10_000_000, Math.round(property.valueCents * 0.72));
+          const maxPrincipalPayment = Math.min(Math.max(0, actor.cashCents), Math.max(0, property.debtCents));
+          const defaultPrincipalPayment = maxPrincipalPayment > 0 ? Math.min(maxPrincipalPayment, Math.max(10_000, Math.round(maxPrincipalPayment * 0.25))) : 0;
+          const selectedPrincipalPayment = Math.min(maxPrincipalPayment, principalAmounts[property.id] && principalAmounts[property.id] > 0 ? principalAmounts[property.id] : defaultPrincipalPayment);
           const renovationOptions = renovationOptionsForProperty(property, world);
           return (
             <Card key={property.id}>
@@ -142,6 +147,19 @@ export default function PropertyScreen() {
                 </View>
 
                 <SectionHeader title="Finance" />
+                {property.debtCents > 0 ? <>
+                  <MoneyAmountPicker
+                    maxCents={maxPrincipalPayment}
+                    valueCents={selectedPrincipalPayment}
+                    onChange={(amountCents) => setPrincipalAmounts((current) => ({ ...current, [property.id]: amountCents }))}
+                    label="Principal payment"
+                    remainingLabel="Cash after payment"
+                  />
+                  <View style={styles.actions}>
+                    {selectedPrincipalPayment > 0 ? <EngineActionButton title={`Pay ${formatMoney(selectedPrincipalPayment, true)} principal`} action={{ verb: 'property.pay_principal', targetIds: [property.id], parameters: { amountCents: selectedPrincipalPayment } }} tone="accent" style={styles.actionButton} /> : null}
+                    {actor.cashCents >= property.debtCents ? <EngineActionButton title={`Pay off · ${formatMoney(property.debtCents, true)}`} action={{ verb: 'property.pay_principal', targetIds: [property.id], parameters: { amountCents: property.debtCents } }} style={styles.actionButton} /> : null}
+                  </View>
+                </> : <Body secondary>No mortgage balance.</Body>}
                 <View style={styles.actions}><EngineActionButton title="Cash-out refinance" action={{ verb: 'property.refinance', targetIds: [property.id], parameters: {} }} style={styles.actionButton} /><EngineActionButton title="Sell property" action={{ verb: 'property.sell', targetIds: [property.id], parameters: {}, destructive: true }} tone="danger" style={styles.actionButton} /></View>
               </> : null}
             </Card>
