@@ -4,6 +4,7 @@ import React from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -31,7 +32,15 @@ export function AppScreen({ children, scroll = true }: { children: React.ReactNo
   const showFloatingBack = !ROOT_TAB_PATHS.has(pathname);
   const contentStyle = [styles.scrollContent, showFloatingBack && styles.scrollContentWithBack];
   const content = scroll ? (
-    <ScrollView contentContainerStyle={contentStyle} showsVerticalScrollIndicator={false}>{children}</ScrollView>
+    <ScrollView
+      automaticallyAdjustKeyboardInsets
+      contentContainerStyle={contentStyle}
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      {children}
+    </ScrollView>
   ) : (
     <View style={contentStyle}>{children}</View>
   );
@@ -164,7 +173,20 @@ const timeOptions = [
 function TimeTray() {
   const { world, busy, advance, activityFor } = useGame();
   const { colors } = useAppTheme();
-  if (!world) return null;
+  const [keyboardVisible, setKeyboardVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSubscription = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  if (!world || keyboardVisible) return null;
   const activeEvent = getActiveEvent(world);
   const onAdvance = (label: string, weeks: number) => {
     const activity = activityFor(weeks);
