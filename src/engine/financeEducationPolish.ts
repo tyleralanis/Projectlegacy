@@ -1,7 +1,7 @@
 import { allocateId } from './createWorld';
 import { recordHistory } from './history';
 import { nextRandom } from './random';
-import type { ActionResult, Business, EducationState, IntentAction, WorldState } from './types';
+import type { ActionResult, Business, EducationState, FocusArea, IntentAction, WorldState } from './types';
 
 import { WORLD_CONTENT } from '@/content/worldContent';
 
@@ -280,7 +280,8 @@ function executeEnrollment(source: WorldState, action: IntentAction): ActionResu
   if (loanContribution > 0) addStudentLoan(world, nextRecord, loanContribution);
 
   rememberFunding(world, nextRecord.id, loanContribution > 0 ? 'student-loan' : cashContribution > 0 ? 'cash' : 'scholarship');
-  nextPlayer.focuses = ['Academics', ...nextPlayer.focuses.filter((item) => item !== 'Academics')].slice(0, 3);
+  const nextFocuses: FocusArea[] = ['Academics', ...nextPlayer.focuses.filter((item) => item !== 'Academics')];
+  nextPlayer.focuses = nextFocuses.slice(0, 3);
   const secondary = activeSecondarySchool(world);
   const schoolName = WORLD_CONTENT.universities.find((item) => item.id === nextRecord.institutionId)?.name ?? 'school';
   const loadCopy = secondary
@@ -468,9 +469,15 @@ function executePrincipalPayment(source: WorldState, action: IntentAction): Acti
   const property = action.targetIds.map((id) => source.properties[id]).find((item) => item?.ownerId === player.id);
   if (!property) return blocked(source, 'Choose a property you own.');
   if (property.debtCents <= 0) return blocked(source, `${property.name} is already debt-free.`);
-  const requested = typeof action.parameters.amountCents === 'number' && Number.isFinite(action.parameters.amountCents)
-    ? Math.max(0, Math.round(action.parameters.amountCents))
-    : property.debtCents;
+  const payoffRequested = action.parameters.payoff === true;
+  if (payoffRequested && player.cashCents < property.debtCents) {
+    return blocked(source, `Paying off ${property.name} requires ${money(property.debtCents)} in liquid cash. You currently have ${money(Math.max(0, player.cashCents))}. Make a smaller principal payment or raise cash first.`);
+  }
+  const requested = payoffRequested
+    ? property.debtCents
+    : typeof action.parameters.amountCents === 'number' && Number.isFinite(action.parameters.amountCents)
+      ? Math.max(0, Math.round(action.parameters.amountCents))
+      : property.debtCents;
   const payment = Math.min(requested, property.debtCents, Math.max(0, player.cashCents));
   if (payment <= 0) return blocked(source, 'Choose a positive principal payment that fits your available liquid cash.');
 
