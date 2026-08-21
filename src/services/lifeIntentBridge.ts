@@ -6,6 +6,7 @@ import { interpretPlayerIntent as interpretBaseIntent } from '@/services/intentS
 
 const ALIASES: Record<string, string[]> = {
   'career.negotiate_hours': ['cut my hours', 'reduce my hours', 'work fewer hours', 'work less', 'go part time', 'part-time', 'part time', '32 hours', '20 hours', 'increase my hours', 'work more hours', '50 hours', 'change my schedule'],
+  'education.ask_family_help': ['ask family for tuition', 'ask family for help', 'ask my family for help', 'ask parents for tuition', 'ask my parents for tuition', 'ask parents for help with college', 'family help with college', 'family help with tuition'],
   'health.sleep': ['protect my sleep', 'sleep more', 'get more sleep', 'prioritize sleep', 'catch up on sleep'],
   'health.nutrition': ['eat better', 'improve my diet', 'improve nutrition', 'meal prep', 'eat healthier', 'nutrition plan'],
   'health.checkup': ['get a checkup', 'doctor checkup', 'routine checkup', 'physical exam', 'preventive care'],
@@ -14,6 +15,7 @@ const ALIASES: Record<string, string[]> = {
   'health.cancel_gym_membership': ['cancel my gym membership', 'cancel gym membership', 'cancel the gym', 'stop gym membership', 'stop gym renewal'],
   'property.screen_tenant': ['screen a tenant', 'find a tenant', 'screen tenants', 'rent to someone', 'tenant application'],
   'property.repair': ['repair the property', 'fix the property', 'make repairs', 'fix my rental', 'repair my rental'],
+  'property.pay_principal': ['pay off house', 'pay off my house', 'payoff house', 'pay off mortgage', 'pay off my mortgage', 'payoff mortgage', 'clear the mortgage', 'pay down mortgage', 'pay down my mortgage', 'make an extra mortgage payment', 'extra mortgage payment', 'pay mortgage principal', 'pay principal on house'],
   'property.develop': ['develop the land', 'develop my land', 'build apartments', 'build multifamily', 'build commercial', 'develop into apartments', 'develop into commercial'],
   'property.manage_portfolio': ['hire a property manager', 'hire property manager', 'manage all my properties', 'manage my portfolio', 'portfolio manager'],
   'property.end_management': ['fire property manager', 'end property management', 'self manage my properties', 'self-manage my properties', 'cancel property management'],
@@ -42,12 +44,22 @@ function propertyTarget(world: WorldState, text: string, verb: string): { id?: s
   const actor = world.characters[world.playerCharacterId];
   let properties = Object.values(world.properties).filter((property) => property.ownerId === actor.id);
   if (verb === 'property.develop') properties = properties.filter((property) => property.kind === 'land' && property.occupancy !== 'construction');
-  if (properties.length === 0) return { clarification: verb === 'property.develop' ? 'You need an undeveloped land parcel you own first.' : 'You do not currently own a property that fits that action.' };
+  if (verb === 'property.pay_principal') properties = properties.filter((property) => property.debtCents > 0);
+  if (properties.length === 0) return { clarification: verb === 'property.develop' ? 'You need an undeveloped land parcel you own first.' : verb === 'property.pay_principal' ? 'You do not currently own a property with a mortgage balance.' : 'You do not currently own a property that fits that action.' };
   const normalized = normalizedText(text);
   const named = properties.filter((property) => normalized.includes(property.name.toLowerCase()));
   if (named.length === 1) return { id: named[0].id };
   if (properties.length === 1) return { id: properties[0].id };
   return { clarification: `Which property do you mean: ${properties.slice(0, 5).map((property) => property.name).join(', ')}?` };
+}
+
+function educationFundingTarget(world: WorldState): { id?: string; clarification?: string } {
+  const actor = world.characters[world.playerCharacterId];
+  const records = Object.values(world.education).filter((record) => record.characterId === actor.id && ['accepted', 'higher', 'trade'].includes(record.status));
+  if (records.length === 0) return { clarification: 'You need an accepted or active college path before asking family to help finance it.' };
+  if (records.length === 1) return { id: records[0].id };
+  const active = records.find((record) => ['higher', 'trade'].includes(record.status));
+  return active ? { id: active.id } : { clarification: 'Which accepted school do you want family help with?' };
 }
 
 function businessTarget(world: WorldState, text: string): { id?: string; clarification?: string } {
@@ -122,6 +134,17 @@ export async function interpretPlayerIntent(world: WorldState, text: string, dom
     if (!target.id) return clarification(requestId, verb, target.clarification ?? 'Which property do you mean?');
     targetIds = [target.id];
     if (verb === 'property.develop') parameters.targetKind = /commercial|retail|office/.test(normalizedText(text)) ? 'commercial' : 'multifamily';
+    if (verb === 'property.pay_principal') {
+      const payoffRequested = /pay\s*off|payoff|clear the mortgage/.test(normalizedText(text));
+      if (payoffRequested) parameters.payoff = true;
+      else if (parsedAmount === undefined) return clarification(requestId, verb, 'How much do you want to pay toward mortgage principal? Include an amount, or say “pay off the mortgage.”');
+    }
+  }
+
+  if (verb === 'education.ask_family_help') {
+    const target = educationFundingTarget(world);
+    if (!target.id) return clarification(requestId, verb, target.clarification ?? 'Which college path do you mean?');
+    targetIds = [target.id];
   }
 
   if (verb === 'business.withdraw_funds') {
@@ -133,7 +156,7 @@ export async function interpretPlayerIntent(world: WorldState, text: string, dom
   if (verb === 'career.negotiate_hours') parameters.hours = hourTarget(text);
   if (verb === 'wealth.set_lifestyle') parameters.posture = lifestyle(text);
 
-  const requiresConfirmation = verb === 'sports.retire';
+  const requiresConfirmation = verb === 'sports.retire' || (verb === 'property.pay_principal' && parameters.payoff === true);
   return {
     requestId,
     status: 'proposal',

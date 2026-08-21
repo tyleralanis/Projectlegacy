@@ -5,6 +5,7 @@ import { EngineActionButton } from '@/components/EngineActionButton';
 import { SubviewHeader } from '@/components/MenuTile';
 import { WORLD_CONTENT } from '@/content/worldContent';
 import { competency } from '@/engine/competencies';
+import { recurringScholarshipCents, tuitionForCurrentLoad } from '@/engine/financeEducationPolish';
 import { formatMoney } from '@/engine/money';
 import { getTuitionBalance } from '@/engine/supplementalDepthBridge';
 import { getTrackMemory } from '@/engine/trackDepth';
@@ -25,15 +26,26 @@ export default function CollegeScreen() {
   const actor = world.characters[world.playerCharacterId];
   const records = Object.values(world.education).filter((record) => record.characterId === actor.id);
   const current = records.find((record) => ['accepted', 'higher', 'trade'].includes(record.status));
+  const secondary = records.find((record) => record.status === 'school');
   const school = current ? WORLD_CONTENT.universities.find((item) => item.id === current.institutionId) : undefined;
   const tuitionBalance = current ? getTuitionBalance(world, current.id) : 0;
   const annualTuition = school?.tuitionCentsPerYear ?? current?.tuitionCentsPerYear ?? 0;
-  const annualScholarship = current?.scholarshipCents ?? 0;
-  const netAnnualTuition = Math.max(0, annualTuition - annualScholarship);
+  const annualScholarship = Math.max(current?.scholarshipCents ?? 0, recurringScholarshipCents(world));
+  const currentLoadTuition = current ? tuitionForCurrentLoad(world, current.id) : 0;
+  const netCurrentLoadTuition = Math.max(0, currentLoadTuition - annualScholarship);
+  const partTimeNow = Boolean(secondary && current && ['higher', 'trade'].includes(current.status));
+  const willStartPartTime = Boolean(secondary && current?.status === 'accepted');
   const enrolledWeeks = current?.startedWeek !== undefined ? Math.max(0, world.calendar.week - current.startedWeek) : 0;
   const expectedWeeks = current?.status === 'trade' ? 104 : 208;
+  const graduationWeek = world.timeline
+    .filter((entry) => entry.category === 'education' && entry.title === 'Graduation' && entry.subjectIds.includes(actor.id))
+    .sort((left, right) => left.week - right.week)[0]?.week ?? actor.birthWeek + 18 * 52;
+  const partTimeOverlap = current?.startedWeek !== undefined
+    ? Math.max(0, Math.min(world.calendar.week, graduationWeek) - current.startedWeek)
+    : 0;
+  const equivalentProgramWeeks = Math.max(0, enrolledWeeks - Math.min(enrolledWeeks, partTimeOverlap) * 0.5);
   const completion = current && ['higher', 'trade'].includes(current.status)
-    ? Math.min(100, (enrolledWeeks / expectedWeeks) * 100)
+    ? Math.min(100, (equivalentProgramWeeks / expectedWeeks) * 100)
     : 0;
   const majorStory = getTrackMemory(world, 'Track · College major');
   const athleteStory = getTrackMemory(world, 'Track · Athlete development');
@@ -47,6 +59,10 @@ export default function CollegeScreen() {
   const academicSkill = competency(world, actor.id, 'academics');
   const communicationSkill = competency(world, actor.id, 'communication');
   const athleticSkill = competency(world, actor.id, 'athletics');
+  const studentLoanDebt = Object.values(world.liabilities)
+    .filter((liability) => liability.debtorId === actor.id && liability.kind === 'student' && liability.annualRateBps > 0)
+    .reduce((sum, liability) => sum + liability.principalCents, 0);
+  const hasFamilyToAsk = actor.parentIds.some((id) => world.characters[id]?.isAlive);
 
   if (sportsOpen) {
     return (
@@ -85,7 +101,7 @@ export default function CollegeScreen() {
                 <Heading size="small">Scholarship</Heading>
                 <StatusPill tone="success">{formatMoney(annualScholarship, true)}/yr</StatusPill>
               </View>
-              <Body secondary>Scholarship support now recurs each academic year instead of disappearing after a one-time tuition reduction.</Body>
+              <Body secondary>Scholarship support is committed recurring aid. It reduces tuition when an eligible academic year is funded; it does not become spendable cash or prepay tuition before enrollment.</Body>
             </Card>
           ) : null}
           <Body secondary>
@@ -142,56 +158,87 @@ export default function CollegeScreen() {
               <Heading>{current.level}</Heading>
               <Body secondary>{school?.name ?? current.institutionId}</Body>
             </View>
-            <StatusPill tone={current.status === 'accepted' ? 'warning' : 'success'}>{current.status}</StatusPill>
+            <StatusPill tone={current.status === 'accepted' ? 'warning' : partTimeNow ? 'accent' : 'success'}>{current.status === 'accepted' ? 'accepted' : partTimeNow ? 'part-time' : current.status}</StatusPill>
           </View>
           <View style={styles.stats}>
             <Stat label="Grades" value={Math.round(current.recordedGrade).toString()} />
             <Stat label="Academic skill" value={Math.round(academicSkill).toString()} />
             <Stat label="Network" value={Math.round(current.network).toString()} />
-            <Stat label="Net tuition / yr" value={formatMoney(netAnnualTuition, true)} />
+            <Stat label="Current tuition load" value={formatMoney(netCurrentLoadTuition, true)} />
           </View>
 
           {current.status === 'accepted' ? (
-            <>
-              <Body secondary>Enrolling creates the first tuition bill. Every later academic year creates another, reduced by recurring scholarship aid.</Body>
-              <EngineActionButton title="Enroll" action={{ verb: 'education.enroll', targetIds: [current.id], parameters: {} }} tone="accent" />
-            </>
+            <Card style={{ backgroundColor: colors.surface }}>
+              <View style={styles.row}>
+                <View style={styles.flexGap}>
+                  <Heading size="small">Finance enrollment first</Heading>
+                  <Body secondary>No tuition debt is created just because you were accepted. Choose how the first academic year will actually be paid before enrollment begins.</Body>
+                </View>
+                <StatusPill tone="warning">Not enrolled</StatusPill>
+              </View>
+              <View style={styles.stats}>
+                <Stat label="Sticker / yr" value={formatMoney(annualTuition, true)} />
+                <Stat label={willStartPartTime ? 'Part-time load' : 'Current load'} value={formatMoney(currentLoadTuition, true)} />
+                <Stat label="Scholarship / yr" value={formatMoney(annualScholarship, true)} tone={annualScholarship > 0 ? 'success' : 'default'} />
+                <Stat label="Still to fund" value={formatMoney(netCurrentLoadTuition, true)} tone={netCurrentLoadTuition > 0 ? 'danger' : 'success'} />
+              </View>
+              <View style={styles.stats}>
+                <Stat label="Liquid cash" value={formatMoney(Math.max(0, actor.cashCents), true)} />
+                <Stat label="Student debt" value={formatMoney(studentLoanDebt, true)} tone={studentLoanDebt > 0 ? 'danger' : 'default'} />
+              </View>
+              {willStartPartTime ? <Body secondary>Secondary school is still active. Starting now is dual enrollment: college runs at half academic pace and half the normal tuition load until secondary graduation. If you graduate high school early, the college path can become full-time immediately.</Body> : <Body secondary>Secondary school is complete, so this can begin as a normal full-time postsecondary path.</Body>}
+              <View style={styles.actions}>
+                {hasFamilyToAsk && netCurrentLoadTuition > 0 ? <EngineActionButton title="Ask family for help" action={{ verb: 'education.ask_family_help', targetIds: [current.id], parameters: {} }} style={styles.actionButton} /> : null}
+                <EngineActionButton title={annualScholarship > 0 ? 'Seek more athletic aid' : 'Seek athletic scholarship'} action={{ verb: 'education.sports_seek_scholarship', targetIds: [current.id], parameters: {} }} style={styles.actionButton} />
+                {netCurrentLoadTuition <= 0 ? <EngineActionButton title="Enroll with aid" action={{ verb: 'education.enroll', targetIds: [current.id], parameters: { funding: 'scholarship' } }} tone="accent" style={styles.actionButton} /> : null}
+                {netCurrentLoadTuition > 0 && actor.cashCents >= netCurrentLoadTuition ? <EngineActionButton title={`Pay ${formatMoney(netCurrentLoadTuition, true)} & enroll`} action={{ verb: 'education.enroll', targetIds: [current.id], parameters: { funding: 'cash' } }} tone="accent" style={styles.actionButton} /> : null}
+                {netCurrentLoadTuition > 0 && actor.cashCents > 0 && actor.cashCents < netCurrentLoadTuition ? <EngineActionButton title="Use cash + student loan" action={{ verb: 'education.enroll', targetIds: [current.id], parameters: { funding: 'cash-and-loan' } }} tone="accent" style={styles.actionButton} /> : null}
+                {netCurrentLoadTuition > 0 ? <EngineActionButton title={`Finance ${formatMoney(netCurrentLoadTuition, true)} with loan`} action={{ verb: 'education.enroll', targetIds: [current.id], parameters: { funding: 'student-loan' } }} style={styles.actionButton} /> : null}
+              </View>
+              <Body secondary>Family help becomes liquid cash first. Scholarships stay committed aid. Student loans become real debt. Enrollment only starts once one of those funding paths covers the current academic load.</Body>
+            </Card>
           ) : (
             <>
               <Card style={{ backgroundColor: colors.surface }}>
                 <View style={styles.row}>
                   <View style={styles.flexGap}>
                     <Heading size="small">Program progress</Heading>
-                    <Body secondary>{Math.round((enrolledWeeks / 52) * 10) / 10} years elapsed · typical {Math.round(expectedWeeks / 52)}-year path</Body>
+                    <Body secondary>{Math.round((enrolledWeeks / 52) * 10) / 10} years elapsed · {Math.round((equivalentProgramWeeks / 52) * 10) / 10} full-time-equivalent years · typical {Math.round(expectedWeeks / 52)}-year path</Body>
                   </View>
                   <StatusPill tone={completion >= 75 ? 'success' : 'accent'}>{Math.round(completion)}%</StatusPill>
                 </View>
                 <ProgressBar value={completion} tone="accent" />
-                <Body secondary>Time enrolled is not the same as academic quality. A student can be near graduation with a weak record—or early with an exceptional one.</Body>
+                <Body secondary>{partTimeNow ? 'College is currently progressing at half pace because secondary school is still active. Those weeks count, but not as a hidden full-time college schedule.' : 'Time enrolled is not the same as academic quality. A student can be near graduation with a weak record—or early with an exceptional one.'}</Body>
               </Card>
 
               <Card style={{ backgroundColor: colors.surface }}>
                 <View style={styles.row}>
                   <View style={styles.flexGap}>
                     <Heading size="small">Tuition</Heading>
-                    <Body secondary>Each academic year creates another bill. Scholarships recur annually; unpaid balances stay visible.</Body>
+                    <Body secondary>Each academic year uses the current study load. Scholarships recur annually; funded student loans stay visible as debt instead of pretending tuition disappeared.</Body>
                   </View>
                   <StatusPill tone={tuitionBalance > 0 ? 'warning' : 'success'}>
-                    {tuitionBalance > 0 ? `${formatMoney(tuitionBalance, true)} due` : 'Current bill paid'}
+                    {tuitionBalance > 0 ? `${formatMoney(tuitionBalance, true)} due` : 'Current tuition funded'}
                   </StatusPill>
                 </View>
                 <View style={styles.stats}>
                   <Stat label="Sticker / yr" value={formatMoney(annualTuition, true)} />
+                  <Stat label={partTimeNow ? 'Part-time load' : 'Current load'} value={formatMoney(currentLoadTuition, true)} />
                   <Stat label="Scholarship / yr" value={formatMoney(annualScholarship, true)} tone={annualScholarship > 0 ? 'success' : 'default'} />
-                  <Stat label="Net / yr" value={formatMoney(netAnnualTuition, true)} />
+                  <Stat label="Net current load" value={formatMoney(netCurrentLoadTuition, true)} />
+                </View>
+                <View style={styles.stats}>
+                  <Stat label="Student-loan debt" value={formatMoney(studentLoanDebt, true)} tone={studentLoanDebt > 0 ? 'danger' : 'default'} />
+                  <Stat label="Liquid cash" value={formatMoney(Math.max(0, actor.cashCents), true)} />
                 </View>
                 {tuitionBalance > 0 ? (
                   <View style={styles.actions}>
+                    {hasFamilyToAsk ? <EngineActionButton title="Ask family for help" action={{ verb: 'education.ask_family_help', targetIds: [current.id], parameters: {} }} style={styles.actionButton} /> : null}
                     <EngineActionButton title="Pay $500" action={{ verb: 'education.pay_tuition', targetIds: [current.id], parameters: { amountCents: 50_000 } }} style={styles.actionButton} />
                     <EngineActionButton title="Pay balance" action={{ verb: 'education.pay_tuition', targetIds: [current.id], parameters: { amountCents: tuitionBalance } }} tone="accent" style={styles.actionButton} />
                   </View>
                 ) : (
-                  <Body secondary>No tuition is due right now. Continuing into another academic year can create a new bill.</Body>
+                  <Body secondary>No tuition is due right now. Continuing into another academic year can create a new financing need after recurring aid is applied.</Body>
                 )}
               </Card>
 
