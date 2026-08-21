@@ -40,6 +40,21 @@ function annualTuition(world: WorldState, educationId: string): number {
     ?? record.tuitionCentsPerYear;
 }
 
+function activeSecondarySchool(world: WorldState): EducationState | undefined {
+  const player = actor(world);
+  return Object.values(world.education).find((record) => record.characterId === player.id && record.status === 'school');
+}
+
+/**
+ * Early postsecondary study is dual enrollment, not a hidden full-time college
+ * schedule. The academic simulation already runs it at half pace; billing follows
+ * the same load until secondary school is complete.
+ */
+export function tuitionForCurrentLoad(world: WorldState, educationId: string): number {
+  const sticker = annualTuition(world, educationId);
+  return activeSecondarySchool(world) ? Math.round(sticker * 0.5) : sticker;
+}
+
 function tuitionBill(world: WorldState, educationId: string) {
   const player = actor(world);
   return Object.values(world.liabilities).find((item) =>
@@ -74,30 +89,29 @@ function postsecondaryRecords(world: WorldState): EducationState[] {
   );
 }
 
-function recurringScholarshipCents(world: WorldState): number {
+export function recurringScholarshipCents(world: WorldState): number {
+  const player = actor(world);
   const recorded = Object.values(world.education)
-    .filter((record) => record.characterId === world.playerCharacterId)
+    .filter((record) => record.characterId === player.id)
     .reduce((maximum, record) => Math.max(maximum, record.scholarshipCents ?? 0), 0);
   return Math.max(recorded, scholarshipFromMemory(world));
 }
 
-function migrateRecurringScholarship(world: WorldState): void {
+function normalizeRecurringScholarshipAndTuition(world: WorldState): void {
   const scholarship = recurringScholarshipCents(world);
-  if (scholarship <= 0) return;
   for (const record of postsecondaryRecords(world)) {
-    record.scholarshipCents = Math.max(record.scholarshipCents ?? 0, scholarship);
+    if (scholarship > 0) record.scholarshipCents = Math.max(record.scholarshipCents ?? 0, scholarship);
     if (!['higher', 'trade'].includes(record.status)) continue;
     const bill = tuitionBill(world, record.id);
     if (!bill || bill.principalCents <= 0) continue;
 
-    // Older builds sometimes reduced the balance immediately but failed to store
-    // the recurring award. Only close the gap down to the expected net first-year
-    // bill so loading an existing save cannot apply the same scholarship twice.
+    // Older saves could have a full-time bill created at age 16 and then have a
+    // one-off scholarship subtracted from it. Never increase an existing bill;
+    // only bring a still-unpaid first-year bill down to the correct current-load
+    // amount after recurring aid.
     const fullAnnual = annualTuition(world, record.id);
-    const expectedNet = Math.max(0, fullAnnual - record.scholarshipCents);
-    if (bill.principalCents <= fullAnnual && bill.principalCents > expectedNet) {
-      bill.principalCents = expectedNet;
-    }
+    const expectedNet = Math.max(0, tuitionForCurrentLoad(world, record.id) - (record.scholarshipCents ?? 0));
+    if (bill.principalCents <= fullAnnual && bill.principalCents > expectedNet) bill.principalCents = expectedNet;
   }
 }
 
@@ -173,11 +187,6 @@ function addTransaction(
   if (world.transactions.length > 1_200) world.transactions.splice(0, world.transactions.length - 1_200);
 }
 
-function activeSecondarySchool(world: WorldState): EducationState | undefined {
-  const player = actor(world);
-  return Object.values(world.education).find((record) => record.characterId === player.id && record.status === 'school');
-}
-
 function addStudentLoan(world: WorldState, education: EducationState, principalCents: number): void {
   if (principalCents <= 0) return;
   const player = actor(world);
@@ -229,19 +238,23 @@ function executeEnrollment(source: WorldState, action: IntentAction): ActionResu
   if (!accepted) return blocked(source, 'Choose an accepted school offer first.');
 
   const scholarship = Math.max(accepted.scholarshipCents ?? 0, recurringScholarshipCents(source));
-  const tuition = annualTuition(source, accepted.id);
-  const netTuition = Math.max(0, tuition - scholarship);
+  const loadTuition = tuitionForCurrentLoad(source, accepted.id);
+  const netTuition = Math.max(0, loadTuition - scholarship);
   const funding = typeof action.parameters.funding === 'string' ? action.parameters.funding : netTuition <= 0 ? 'scholarship' : '';
+  const validFunding = ['cash', 'student-loan', 'cash-and-loan', 'scholarship'];
 
-  if (netTuition > 0 && !['cash', 'student-loan'].includes(funding)) {
-    return blocked(source, `Arrange financing before enrollment. ${money(netTuition)} remains after recurring aid; use liquid cash, a student loan, or raise cash first through family help, work, or another source.`);
+  if (netTuition > 0 && !validFunding.includes(funding)) {
+    return blocked(source, `Arrange financing before enrollment. ${money(netTuition)} remains after recurring aid; use liquid cash, a student loan, family help, or another source before starting.`);
+  }
+  if (netTuition > 0 && funding === 'scholarship') {
+    return blocked(source, `${money(netTuition)} is still unfunded after scholarships. Choose cash, a student loan, family help, or a cash-and-loan combination before enrolling.`);
   }
   if (funding === 'cash' && player.cashCents < netTuition) {
     return blocked(source, `You need ${money(netTuition)} in liquid cash to fund the first academic year after scholarships.`);
   }
 
   const world = clone(source);
-  migrateRecurringScholarship(world);
+  normalizeRecurringScholarshipAndTuition(world);
   const nextPlayer = actor(world);
   const nextRecord = world.education[accepted.id];
   nextRecord.scholarshipCents = Math.max(nextRecord.scholarshipCents ?? 0, scholarship);
@@ -249,25 +262,37 @@ function executeEnrollment(source: WorldState, action: IntentAction): ActionResu
   nextRecord.startedWeek = world.calendar.week;
   nextRecord.tuitionCentsPerYear = 0;
 
-  if (funding === 'cash' && netTuition > 0) {
-    nextPlayer.cashCents -= netTuition;
-    addTransaction(world, 'tuition-funded', -netTuition, `First academic year at ${nextRecord.level}`, nextPlayer.id, nextRecord.institutionId);
-  } else if (funding === 'student-loan' && netTuition > 0) {
-    addStudentLoan(world, nextRecord, netTuition);
-  }
+  const cashContribution = funding === 'cash'
+    ? netTuition
+    : funding === 'cash-and-loan'
+      ? Math.min(Math.max(0, nextPlayer.cashCents), netTuition)
+      : 0;
+  const loanContribution = funding === 'student-loan'
+    ? netTuition
+    : funding === 'cash-and-loan'
+      ? Math.max(0, netTuition - cashContribution)
+      : 0;
 
-  rememberFunding(world, nextRecord.id, funding || 'scholarship');
+  if (cashContribution > 0) {
+    nextPlayer.cashCents -= cashContribution;
+    addTransaction(world, 'tuition-funded', -cashContribution, `First academic year at ${nextRecord.level}`, nextPlayer.id, nextRecord.institutionId);
+  }
+  if (loanContribution > 0) addStudentLoan(world, nextRecord, loanContribution);
+
+  rememberFunding(world, nextRecord.id, loanContribution > 0 ? 'student-loan' : cashContribution > 0 ? 'cash' : 'scholarship');
   nextPlayer.focuses = ['Academics', ...nextPlayer.focuses.filter((item) => item !== 'Academics')].slice(0, 3);
   const secondary = activeSecondarySchool(world);
   const schoolName = WORLD_CONTENT.universities.find((item) => item.id === nextRecord.institutionId)?.name ?? 'school';
   const loadCopy = secondary
-    ? 'Because secondary school is still active, college begins as part-time dual enrollment. It becomes a normal full-time path after secondary graduation.'
+    ? 'Because secondary school is still active, college begins as part-time dual enrollment at half the normal academic and tuition load. It becomes a normal full-time path after secondary graduation.'
     : 'Secondary school is complete, so this begins as a normal full-time postsecondary path.';
   const fundingCopy = netTuition <= 0
-    ? `Recurring aid covers the ${money(tuition)} first-year tuition.`
-    : funding === 'cash'
-      ? `${money(netTuition)} was paid from liquid cash after ${money(scholarship)} in recurring aid.`
-      : `${money(netTuition)} was financed with student debt after ${money(scholarship)} in recurring aid.`;
+    ? `Recurring aid covers the ${money(loadTuition)} first-year tuition for this load.`
+    : cashContribution > 0 && loanContribution > 0
+      ? `${money(cashContribution)} was paid from liquid cash and ${money(loanContribution)} was financed after ${money(scholarship)} in recurring aid.`
+      : cashContribution > 0
+        ? `${money(cashContribution)} was paid from liquid cash after ${money(scholarship)} in recurring aid.`
+        : `${money(loanContribution)} was financed with student debt after ${money(scholarship)} in recurring aid.`;
   recordHistory(world, 'education', `Enrolled at ${schoolName}`, `${fundingCopy} ${loadCopy}`, { important: true, subjectIds: [nextPlayer.id, nextRecord.id] });
   return ok(world, `Enrollment is active. ${fundingCopy} ${secondary ? 'College is part-time while you are still in secondary school.' : ''}`.trim());
 }
@@ -318,12 +343,12 @@ function executeAthleticScholarship(source: WorldState, action: IntentAction): A
 
   // An award earned before enrollment is committed aid, not cash and not a
   // retroactive payment. If a legacy unpaid current-year bill exists, only bring
-  // that bill down to the expected net amount without double-applying old aid.
+  // that bill down to the correct current-load amount without double-applying aid.
   if (['higher', 'trade'].includes(next.status)) {
     const bill = tuitionBill(world, next.id);
     if (bill) {
       const fullAnnual = annualTuition(world, next.id);
-      const expectedNet = Math.max(0, fullAnnual - recurringAward);
+      const expectedNet = Math.max(0, tuitionForCurrentLoad(world, next.id) - recurringAward);
       if (bill.principalCents <= fullAnnual && bill.principalCents > expectedNet) bill.principalCents = expectedNet;
     }
   }
@@ -350,7 +375,92 @@ function executeAthleticScholarship(source: WorldState, action: IntentAction): A
     };
   }
   recordHistory(world, 'education', 'Athletic scholarship awarded', `${money(recurringAward)} per year is now committed aid. It will reduce tuition when an eligible academic year is funded; it is not spendable cash.`, { subjectIds: [nextPlayer.id, next.id], importance: 3 });
-  return ok(world, `You earned ${money(recurringAward)} per year in athletic scholarship support.`);
+  return ok(world, `You earned ${money(recurringAward)} per year in athletic scholarship support. It is committed aid and will apply when tuition is funded.`);
+}
+
+function educationFundingTarget(source: WorldState, action: IntentAction): EducationState | undefined {
+  const player = actor(source);
+  return action.targetIds
+    .map((id) => source.education[id])
+    .find((record) => record?.characterId === player.id && ['accepted', 'higher', 'trade'].includes(record.status))
+    ?? postsecondaryRecords(source)[0];
+}
+
+function educationYearIndex(world: WorldState, education: EducationState): number {
+  if (education.startedWeek === undefined) return 0;
+  return Math.max(0, Math.floor((world.calendar.week - education.startedWeek) / 52));
+}
+
+function executeFamilyTuitionHelp(source: WorldState, action: IntentAction): ActionResult {
+  const education = educationFundingTarget(source, action);
+  if (!education) return blocked(source, 'Choose an accepted or active college path first.');
+  const player = actor(source);
+  const parents = player.parentIds.map((id) => source.characters[id]).filter((parent) => parent?.isAlive);
+  if (parents.length === 0) return blocked(source, 'There is no living parent in this life who can be asked for tuition help.');
+
+  const year = educationYearIndex(source, education);
+  const category = `Education · Family help · ${education.id} · ${year}`;
+  if (Object.values(source.memories).some((memory) => memory.category === category && memory.participantIds.includes(player.id))) {
+    return blocked(source, 'You already asked family for help with this academic year.');
+  }
+
+  const currentBill = tuitionBill(source, education.id)?.principalCents ?? 0;
+  const scholarship = Math.max(education.scholarshipCents ?? 0, recurringScholarshipCents(source));
+  const fundingNeed = currentBill > 0
+    ? currentBill
+    : education.status === 'accepted'
+      ? Math.max(0, tuitionForCurrentLoad(source, education.id) - scholarship)
+      : 0;
+  if (fundingNeed <= 0) return blocked(source, 'There is no currently unfunded tuition amount to ask family to cover.');
+
+  const requested = typeof action.parameters.amountCents === 'number' && Number.isFinite(action.parameters.amountCents)
+    ? Math.min(fundingNeed, Math.max(0, Math.round(action.parameters.amountCents)))
+    : fundingNeed;
+  if (requested <= 0) return blocked(source, 'Choose a positive amount of tuition help to request.');
+
+  const world = clone(source);
+  const nextPlayer = actor(world);
+  let remaining = requested;
+  let contribution = 0;
+  const contributingParentIds: string[] = [];
+
+  for (const originalParent of parents) {
+    if (remaining <= 0) break;
+    const parent = world.characters[originalParent.id];
+    const relationship = Object.values(world.relationships).find((item) => item.characterIds.includes(nextPlayer.id) && item.characterIds.includes(parent.id));
+    const goodwill = clamp(((relationship?.trust ?? 52) + (relationship?.affection ?? 58)) / 160, 0.25, 0.78);
+    const reserve = 1_500_000;
+    const excessCash = Math.max(0, parent.cashCents - reserve);
+    const willingAmount = Math.floor(excessCash * goodwill);
+    const gift = Math.min(remaining, willingAmount);
+    if (gift <= 0) continue;
+    parent.cashCents -= gift;
+    nextPlayer.cashCents += gift;
+    remaining -= gift;
+    contribution += gift;
+    contributingParentIds.push(parent.id);
+    addTransaction(world, 'family-education-help', gift, `Family help for ${education.level}`, parent.id, nextPlayer.id);
+  }
+
+  const memoryId = allocateId(world, 'memory');
+  world.memories[memoryId] = {
+    id: memoryId,
+    participantIds: [nextPlayer.id, education.id, ...contributingParentIds],
+    category,
+    week: world.calendar.week,
+    valence: contribution > 0 ? 0.45 : -0.1,
+    importance: contribution > 0 ? 60 : 42,
+    permanent: false,
+    unresolved: false,
+    visibility: 'shared',
+    narrative: contribution > 0
+      ? `Family contributed ${money(contribution)} toward academic-year financing.`
+      : 'Family could not contribute liquid cash toward this academic year.',
+  };
+
+  if (contribution <= 0) return ok(world, 'You asked family for tuition help, but nobody currently has enough available cash to contribute without exhausting their own reserve.');
+  recordHistory(world, 'education', 'Family helped with tuition', `${money(contribution)} moved into your liquid cash for education financing. It is family support, not a scholarship and not a loan.`, { subjectIds: [nextPlayer.id, education.id, ...contributingParentIds], importance: 2 });
+  return ok(world, `Family contributed ${money(contribution)} toward tuition. You now have ${money(nextPlayer.cashCents)} in liquid cash available for the financing decision.`);
 }
 
 function executePrincipalPayment(source: WorldState, action: IntentAction): ActionResult {
@@ -436,7 +546,8 @@ function processAcademicYearFunding(before: WorldState, world: WorldState): void
     if (crossedYears <= 0) continue;
 
     const scholarship = education.scholarshipCents ?? 0;
-    const netAnnual = Math.max(0, annualTuition(world, education.id) - scholarship);
+    const loadTuition = tuitionForCurrentLoad(world, education.id);
+    const netAnnual = Math.max(0, loadTuition - scholarship);
     const priorMode = fundingMemory(world, education.id);
     for (let index = 0; index < crossedYears; index += 1) {
       if (netAnnual <= 0) continue;
@@ -445,22 +556,22 @@ function processAcademicYearFunding(before: WorldState, world: WorldState): void
     }
     if (netAnnual > 0) {
       recordHistory(world, 'education', 'A new academic year was funded', priorMode === 'student-loan'
-        ? `${money(scholarship)} in recurring aid reduced sticker tuition. The remaining ${money(netAnnual)} was financed under the existing student-loan plan.`
-        : `${money(scholarship)} in recurring aid reduced sticker tuition. ${money(netAnnual)} is due for the new academic year and can be paid from available cash.`, { subjectIds: [education.id], importance: 2 });
+        ? `${money(scholarship)} in recurring aid reduced ${money(loadTuition)} of tuition for the current load. The remaining ${money(netAnnual)} was financed under the existing student-loan plan.`
+        : `${money(scholarship)} in recurring aid reduced ${money(loadTuition)} of tuition for the current load. ${money(netAnnual)} is due for the new academic year and can be paid from available cash.`, { subjectIds: [education.id], importance: 2 });
     }
   }
 }
 
 export function normalizeFinanceEducationState(source: WorldState): WorldState {
   const world = clone(source);
-  migrateRecurringScholarship(world);
+  normalizeRecurringScholarshipAndTuition(world);
   normalizeBusinessValuations(world);
   return world;
 }
 
 export function applyFinanceEducationAdvance(before: WorldState, source: WorldState): WorldState {
   const world = clone(source);
-  migrateRecurringScholarship(world);
+  normalizeRecurringScholarshipAndTuition(world);
   processAcademicYearFunding(before, world);
   normalizeBusinessValuations(world);
   return world;
@@ -469,6 +580,7 @@ export function applyFinanceEducationAdvance(before: WorldState, source: WorldSt
 export function executeFinanceEducationPolish(source: WorldState, action: IntentAction, confirmed = false): ActionResult | null {
   if (action.verb === 'education.enroll') return executeEnrollment(source, action);
   if (action.verb === 'education.sports_seek_scholarship') return executeAthleticScholarship(source, action);
+  if (action.verb === 'education.ask_family_help') return executeFamilyTuitionHelp(source, action);
   if (action.verb === 'property.pay_principal') return executePrincipalPayment(source, action);
   if (action.verb === 'business.sell') return executeBusinessSale(source, action, confirmed);
   return null;
