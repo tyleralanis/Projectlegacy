@@ -7,6 +7,14 @@ const WELLNESS_VERBS = new Set(['health.run', 'health.gym', 'health.join_gym', '
 export function executeAgeActionGate(source: WorldState, action: IntentAction): ActionResult | null {
   const age = playerAgeYears(source);
 
+  if (age < 5 && action.verb.startsWith('health.')) {
+    return {
+      world: source,
+      validation: { valid: false, requiresConfirmation: false },
+      message: 'Your caregivers handle health decisions at this age.',
+    };
+  }
+
   if (WELLNESS_VERBS.has(action.verb)) {
     const minimumAge = minimumAgeForWellnessVerb(action.verb);
     if (age < minimumAge) {
