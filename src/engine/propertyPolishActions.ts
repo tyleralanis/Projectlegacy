@@ -72,8 +72,8 @@ export function executePropertyPolishAction(source: WorldState, action: IntentAc
   const property = ownedProperty(source, action.targetIds);
   if (!property) return blocked(source, 'Choose a property you own.');
   const renovationId = typeof action.parameters.renovationId === 'string' ? action.parameters.renovationId : '';
-  const option = renovationOptionsForProperty(property).find((item) => item.id === renovationId);
-  if (!option) return blocked(source, 'Choose an improvement that fits this property.');
+  const option = renovationOptionsForProperty(property, source).find((item) => item.id === renovationId);
+  if (!option) return blocked(source, 'That improvement is not currently available for this property.');
   if (actor.cashCents < option.costCents) return blocked(source, `You need ${(option.costCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })} in cash.`);
 
   const world = clone(source);
@@ -83,6 +83,21 @@ export function executePropertyPolishAction(source: WorldState, action: IntentAc
   next.condition = Math.min(100, next.condition + option.conditionGain);
   next.valueCents += Math.round(option.costCents * option.valueReturnBps / 10_000);
   world.transactions.push({ id: allocateId(world, 'transaction'), week: world.calendar.week, kind: 'property-renovation', amountCents: -option.costCents, fromId: nextActor.id, toId: next.id, memo: `${option.label} at ${next.name}` });
+
+  const improvementMemoryId = allocateId(world, 'memory');
+  world.memories[improvementMemoryId] = {
+    id: improvementMemoryId,
+    participantIds: [nextActor.id, next.id],
+    category: `Property · Improvement · ${next.id} · ${option.id}`,
+    week: world.calendar.week,
+    valence: 0.45,
+    importance: 45,
+    permanent: true,
+    unresolved: false,
+    visibility: 'private',
+    narrative: `${option.label} completed at ${next.name}.`,
+  };
+
   recordHistory(world, 'property', option.label, `${next.name}: ${option.detail}`, { subjectIds: [nextActor.id, next.id], importance: 2 });
   return ok(world, `${option.label} completed at ${next.name}.`);
 }
