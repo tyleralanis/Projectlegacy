@@ -2,11 +2,12 @@ import * as Haptics from 'expo-haptics';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { executeAction } from '@/engine/actions';
+import { advanceWorldWithOptionalCapacityDecisions } from '@/engine/advancePolish';
 import { allocateId, createWorld } from '@/engine/createWorld';
 import { executeDepthAction } from '@/engine/depthActions';
 import { runDeveloperCommand, type DeveloperCommand } from '@/engine/developerTools';
 import { netWorthCents } from '@/engine/money';
-import { activityLevel, advanceWorld } from '@/engine/simulation';
+import { activityLevel } from '@/engine/simulation';
 import { resolveEvent } from '@/engine/simulationEventBridge';
 import { applySupplementalAdvance, executeSupplementalDepth, normalizeSupplementalState } from '@/engine/supplementalDepthBridge';
 import type { AdvanceSummary, FavoriteEntityType, FocusArea, GameSettings, IntentAction, IntentAuditEntry, OutcomeExplanation, WorldState } from '@/engine/types';
@@ -131,7 +132,7 @@ export function GameProvider({ children }: React.PropsWithChildren) {
     await runBusy(async () => {
       const beforeCash = world.characters[world.playerCharacterId].cashCents;
       const beforeWorth = netWorthCents(world);
-      const result = advanceWorld(world, weeks, { interrupt: true, autoResolveEvents: true });
+      const result = advanceWorldWithOptionalCapacityDecisions(world, weeks);
       const enriched = applySupplementalAdvance(world, result.world);
       result.summary.cashDeltaCents = enriched.characters[enriched.playerCharacterId].cashCents - beforeCash;
       result.summary.netWorthDeltaCents = netWorthCents(enriched) - beforeWorth;
