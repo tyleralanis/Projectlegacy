@@ -3,6 +3,7 @@ import { applyContinuityPolish } from './continuityPolish';
 import { applyDelegationAdvance, executeDelegationDepth, prepareDelegationAdvance } from './delegationDepth';
 import { normalizeDelegatedWorld } from './delegationNormalize';
 import { executeSecondarySchoolApplication } from './educationApplicationBridge';
+import { applyFinanceEducationAdvance, executeFinanceEducationPolish, normalizeFinanceEducationState } from './financeEducationPolish';
 import { applyLegalPolish } from './legalPolish';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
 import { applyNarrativeDepth } from './narrativeDepth';
@@ -23,7 +24,7 @@ export { ceoCandidates, getTuitionBalance, hasGymMembership };
 export { businessRunwayReserveCents, distributableBusinessCashCents, portfolioManagementFeeWeeklyCents, propertyManagerActive } from './delegationDepth';
 
 export function normalizeSupplementalState(source: WorldState): WorldState {
-  return normalizeDelegatedWorld(normalizeBaseSupplementalState(source));
+  return normalizeDelegatedWorld(normalizeFinanceEducationState(normalizeBaseSupplementalState(source)));
 }
 
 /**
@@ -37,6 +38,8 @@ export function executeSupplementalDepth(
   action: IntentAction,
   confirmed = false,
 ): ActionResult | null {
+  const financeEducation = executeFinanceEducationPolish(source, action, confirmed);
+  if (financeEducation) return financeEducation;
   const rebalance = executeRebalancePolish(source, action);
   if (rebalance) return rebalance;
   const polished = executeSystemPolishAction(source, action);
@@ -56,9 +59,8 @@ export function executeSupplementalDepth(
  * Renewal state is prepared before the older supplemental pass so legacy
  * expiry logic sees a paid-forward membership. Base systems then run once,
  * followed by recurring life systems, owner/manager delegation, existing-
- * system economic polish, cross-life continuity, legal-case progression, and
- * the narrative layer that turns those system changes into persistent stories,
- * callbacks, ordinary-life texture, and proactive NPC initiative.
+ * system economic polish, cross-life continuity, legal-case progression,
+ * finance/education normalization, and the narrative layer.
  */
 export function applySupplementalAdvance(before: WorldState, after: WorldState): WorldState {
   const prepared = prepareDelegationAdvance(before, after);
@@ -68,5 +70,6 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
   const polished = applySystemPolishAdvance(before, delegated);
   const continuous = applyContinuityPolish(before, polished);
   const legal = applyLegalPolish(before, continuous);
-  return applyNarrativeDepth(before, legal);
+  const financed = applyFinanceEducationAdvance(before, legal);
+  return applyNarrativeDepth(before, financed);
 }

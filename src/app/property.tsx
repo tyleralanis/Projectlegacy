@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EngineActionButton } from '@/components/EngineActionButton';
+import { MoneyAmountPicker } from '@/components/MoneyAmountPicker';
 import { SubviewHeader } from '@/components/MenuTile';
 import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { monthlyPropertyListings } from '@/content/lifeCatalogs';
@@ -18,12 +19,12 @@ export default function PropertyScreen() {
   const { world } = useGame();
   const { colors } = useAppTheme();
   const [mode, setMode] = useState<ViewMode>('browse');
+  const [principalAmounts, setPrincipalAmounts] = useState<Record<string, number>>({});
   if (!world) return null;
   const actor = world.characters[world.playerCharacterId];
   const city = WORLD_CONTENT.cities.find((item) => item.id === actor.cityId);
   const properties = Object.values(world.properties).filter((property) => property.ownerId === actor.id);
   const listings = monthlyPropertyListings(world.calendar.week, actor.cityId);
-  const monthNumber = Math.floor(world.calendar.week / 4);
   const managerActive = propertyManagerActive(world);
   const managementFee = portfolioManagementFeeWeeklyCents(world);
   const portfolioValue = properties.reduce((sum, property) => sum + property.valueCents, 0);
@@ -101,6 +102,9 @@ export default function PropertyScreen() {
           const development = Object.values(world.memories).find((memory) => memory.category.startsWith(`Property · Development · ${property.id} ·`) && memory.unresolved);
           const multiCost = Math.max(10_000_000, Math.round(property.valueCents * 0.58));
           const commercialCost = Math.max(10_000_000, Math.round(property.valueCents * 0.72));
+          const maxPrincipalPayment = Math.min(Math.max(0, actor.cashCents), Math.max(0, property.debtCents));
+          const defaultPrincipalPayment = maxPrincipalPayment > 0 ? Math.min(maxPrincipalPayment, Math.max(10_000, Math.round(maxPrincipalPayment * 0.25))) : 0;
+          const selectedPrincipalPayment = Math.min(maxPrincipalPayment, principalAmounts[property.id] && principalAmounts[property.id] > 0 ? principalAmounts[property.id] : defaultPrincipalPayment);
           return (
             <Card key={property.id}>
               <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading>{property.name}</Heading><Body secondary>{property.kind} · {property.occupancy} · {property.managed || managerActive ? 'professionally managed' : 'self-managed'}</Body></View><StatusPill tone={equity >= 0 ? 'success' : 'danger'}>{formatMoney(equity, true)} equity</StatusPill></View>
@@ -145,13 +149,26 @@ export default function PropertyScreen() {
                 </View>
 
                 <SectionHeader title="Finance" />
-                <Body secondary>Refinancing now depends on current rates, property condition, existing leverage, and closing costs. Pulling equity out increases future interest exposure.</Body>
+                <Body secondary>Refinancing depends on current rates, condition, leverage, and closing costs. You can also pay any amount directly toward principal or clear the mortgage completely when liquid cash allows it.</Body>
+                {property.debtCents > 0 ? <>
+                  <MoneyAmountPicker
+                    maxCents={maxPrincipalPayment}
+                    valueCents={selectedPrincipalPayment}
+                    onChange={(amountCents) => setPrincipalAmounts((current) => ({ ...current, [property.id]: amountCents }))}
+                    label="Principal payment"
+                    remainingLabel="Cash after payment"
+                  />
+                  <View style={styles.actions}>
+                    {selectedPrincipalPayment > 0 ? <EngineActionButton title={`Pay ${formatMoney(selectedPrincipalPayment, true)} principal`} action={{ verb: 'property.pay_principal', targetIds: [property.id], parameters: { amountCents: selectedPrincipalPayment } }} tone="accent" style={styles.actionButton} /> : null}
+                    {actor.cashCents >= property.debtCents ? <EngineActionButton title={`Pay off · ${formatMoney(property.debtCents, true)}`} action={{ verb: 'property.pay_principal', targetIds: [property.id], parameters: { amountCents: property.debtCents } }} style={styles.actionButton} /> : null}
+                  </View>
+                </> : <Body secondary>This property is debt-free. There is no mortgage balance to pay.</Body>}
                 <View style={styles.actions}><EngineActionButton title="Cash-out refinance" action={{ verb: 'property.refinance', targetIds: [property.id], parameters: {} }} style={styles.actionButton} /><EngineActionButton title="Sell property" action={{ verb: 'property.sell', targetIds: [property.id], parameters: {}, destructive: true }} tone="danger" style={styles.actionButton} /></View>
               </> : null}
             </Card>
           );
         })}
-        <OtherActionComposer domains={['property']} placeholder="Something else with a property, portfolio manager, rent, or development…" />
+        <OtherActionComposer domains={['property']} placeholder="Something else with a property, portfolio manager, rent, mortgage payoff, or development…" />
       </View>}
     </AppScreen>
   );

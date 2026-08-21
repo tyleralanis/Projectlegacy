@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { EngineActionButton } from '@/components/EngineActionButton';
+import { MoneyAmountPicker } from '@/components/MoneyAmountPicker';
 import { SubviewHeader } from '@/components/MenuTile';
 import { competency, effectiveInvestingCompetence } from '@/engine/competencies';
 import { formatMoney, holdingValueCents } from '@/engine/money';
@@ -21,6 +22,7 @@ const strategies = [
 
 export default function InvestingScreen() {
   const { world } = useGame();
+  const [investmentAmountCents, setInvestmentAmountCents] = useState(0);
   if (!world) return null;
   const actor = world.characters[world.playerCharacterId];
   const holdings = Object.values(world.holdings).filter((holding) => holding.ownerId === actor.id);
@@ -50,6 +52,9 @@ export default function InvestingScreen() {
   const effectiveSkill = effectiveInvestingCompetence(world, actor.id);
   const privateHoldings = holdings.filter((holding) => world.securities[holding.securityId]?.sector === 'Private Markets');
   const publicSecurities = Object.values(world.securities).filter((security) => security.sector !== 'Private Markets');
+  const liquidity = Math.max(0, actor.cashCents);
+  const defaultInvestment = liquidity > 0 ? Math.min(liquidity, Math.max(10_000, Math.round(liquidity * 0.1))) : 0;
+  const selectedInvestment = Math.min(liquidity, investmentAmountCents > 0 ? investmentAmountCents : defaultInvestment);
 
   return (
     <AppScreen>
@@ -80,12 +85,21 @@ export default function InvestingScreen() {
         </Card>
       </View>
 
+      <View style={styles.section}>
+        <SectionHeader title="Investment amount" action={<StatusPill tone={liquidity > 0 ? 'accent' : 'warning'}>{formatMoney(liquidity, true)} liquid</StatusPill>} />
+        <Card>
+          <Heading size="small">Choose how much cash to put to work</Heading>
+          <Body secondary>The same amount is used by the buy buttons below. It can be dragged, typed directly, or set as a percentage of current liquid cash; houses, businesses, and other illiquid assets do not count.</Body>
+          <MoneyAmountPicker maxCents={liquidity} valueCents={selectedInvestment} onChange={setInvestmentAmountCents} label="To invest" />
+        </Card>
+      </View>
+
       {privateDealMemory ? <View style={styles.section}>
         <SectionHeader title="Private market access" action={<StatusPill tone={privateDealMemory.unresolved ? 'warning' : 'success'}>{privateDealMemory.unresolved ? 'Deal open' : 'Network active'}</StatusPill>} />
         <Card accent>
           <Heading size="small">Access came from people, not a menu unlock</Heading>
           <Body secondary>{privateDealMemory.narrative}</Body>
-          {privateDealMemory.unresolved ? <View style={styles.actions}><EngineActionButton title="Invest $25,000" action={{ verb: 'markets.private_deal', targetIds: [], parameters: { amountCents: 2_500_000 } }} tone="accent" style={styles.smallButton} /><EngineActionButton title="Invest $100,000" action={{ verb: 'markets.private_deal', targetIds: [], parameters: { amountCents: 10_000_000 } }} style={styles.smallButton} /></View> : null}
+          {privateDealMemory.unresolved && selectedInvestment > 0 ? <EngineActionButton title={`Invest ${formatMoney(selectedInvestment, true)}`} action={{ verb: 'markets.private_deal', targetIds: [], parameters: { amountCents: selectedInvestment } }} tone="accent" /> : null}
         </Card>
         {privateHoldings.map((holding) => {
           const security = world.securities[holding.securityId];
@@ -97,7 +111,11 @@ export default function InvestingScreen() {
 
       <View style={styles.section}>
         <SectionHeader title="Quick allocation" />
-        <Card><Heading size="small">Broad market fund</Heading><Body secondary>A simple diversified allocation when you do not want every dollar to depend on your stock-picking skill.</Body><View style={styles.actions}><EngineActionButton title="Invest $500" action={{ verb: 'markets.allocate', targetIds: [], parameters: { amountCents: 50_000 } }} tone="accent" style={{ flex: 1 }} /><EngineActionButton title="Invest $5,000" action={{ verb: 'markets.allocate', targetIds: [], parameters: { amountCents: 500_000 } }} tone="accent" style={{ flex: 1 }} /></View></Card>
+        <Card>
+          <Heading size="small">Broad market fund</Heading>
+          <Body secondary>A simple diversified allocation when you do not want every dollar to depend on your stock-picking skill.</Body>
+          {selectedInvestment > 0 ? <EngineActionButton title={`Invest ${formatMoney(selectedInvestment, true)}`} action={{ verb: 'markets.allocate', targetIds: [], parameters: { amountCents: selectedInvestment } }} tone="accent" /> : <Body secondary>No liquid cash is currently available to invest.</Body>}
+        </Card>
         <Card><View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">🧑‍💼 Wealth manager</Heading><Body secondary>{hasManager ? 'Professional help now reduces some of the administrative burden of wealth. You still own the decisions and the outcome.' : 'Always available to ask for; not always affordable. First-year retainer is $48,000.'}</Body></View><StatusPill tone={hasManager ? 'success' : 'neutral'}>{hasManager ? 'Retained' : '$48k/yr'}</StatusPill></View>{!hasManager ? <EngineActionButton title="Hire wealth manager" action={{ verb: 'markets.hire_wealth_manager', targetIds: [], parameters: { amountCents: 4_800_000 } }} tone="accent" /> : null}</Card>
       </View>
 
@@ -116,8 +134,7 @@ export default function InvestingScreen() {
               {thesis ? <Card accent><Heading size="small">Your current thesis</Heading><Body secondary>{thesis}</Body></Card> : null}
               <View style={styles.actions}>
                 <EngineActionButton title="Research" action={{ verb: 'markets.research', targetIds: [security.id], parameters: {} }} tone="accent" style={styles.smallButton} />
-                <EngineActionButton title="Buy $500" action={{ verb: 'markets.buy', targetIds: [security.id], parameters: { amountCents: 50_000 } }} style={styles.smallButton} />
-                <EngineActionButton title="Buy $5,000" action={{ verb: 'markets.buy', targetIds: [security.id], parameters: { amountCents: 500_000 } }} style={styles.smallButton} />
+                {selectedInvestment > 0 ? <EngineActionButton title={`Buy ${formatMoney(selectedInvestment, true)}`} action={{ verb: 'markets.buy', targetIds: [security.id], parameters: { amountCents: selectedInvestment } }} style={styles.smallButton} /> : null}
                 {holding ? <EngineActionButton title="Sell position" action={{ verb: 'markets.sell', targetIds: [security.id], parameters: { amountCents: value } }} tone="danger" style={styles.smallButton} /> : null}
               </View>
             </Card>

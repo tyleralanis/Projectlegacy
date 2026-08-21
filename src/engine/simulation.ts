@@ -139,11 +139,18 @@ function updateBusiness(world: WorldState, business: Business): void {
   const overload = business.demand / Math.max(1, business.capacity);
   business.quality = clamp(business.quality + (overload > 1.15 ? -0.55 * overload : 0.12) + range(world, -0.25, 0.25));
   business.reputation = clamp(business.reputation + (business.quality - 55) / 240 - Math.max(0, overload - 1) * 0.3);
-  const normalizedProfit = Math.max(-2_000_000, Math.min(20_000_000, profit));
-  business.valuationCents = Math.max(
-    0,
-    clampCents(business.valuationCents * 0.995 + Math.max(0, normalizedProfit) * 110 + business.revenueWeeklyCents * 2.5),
-  );
+
+  // A few profitable weeks are evidence, not a mature earnings history. Move
+  // valuation gradually toward ordinary revenue/profit multiples instead of
+  // capitalizing one week's profit by more than a hundred times every week.
+  const annualProfit = Math.max(0, profit) * 52;
+  const revenueEnterpriseValue = Math.max(0, business.revenueWeeklyCents * 52 * 0.55);
+  const profitEnterpriseValue = Math.max(0, annualProfit * 4);
+  const operatingEquityValue = Math.max(0, Math.max(revenueEnterpriseValue, profitEnterpriseValue) - business.debtCents);
+  const netBusinessCash = Math.max(0, business.cashCents - business.debtCents);
+  const indicatedValue = Math.max(netBusinessCash, operatingEquityValue);
+  business.valuationCents = Math.max(0, clampCents(business.valuationCents * 0.94 + indicatedValue * 0.06));
+
   if (business.cashCents < -Math.max(2_500_000, business.costWeeklyCents * 10)) {
     business.active = false;
     addFeed(world, 'business', `${business.name} closed`, 'Debt and operating losses exhausted the company’s runway. The experience and relationships remain.', true);
@@ -177,17 +184,32 @@ function processBusinessesAndProperties(world: WorldState): void {
   }
 }
 
+function secondaryCompletionWeek(world: WorldState, actor: Character): number {
+  const graduation = world.timeline
+    .filter((entry) => entry.category === 'education' && entry.title === 'Graduation')
+    .sort((left, right) => left.week - right.week)[0];
+  return graduation?.week ?? actor.birthWeek + 18 * 52;
+}
+
+function equivalentProgramWeeks(world: WorldState, actor: Character, startedWeek: number): number {
+  const elapsed = Math.max(0, world.calendar.week - startedWeek);
+  const secondaryEnd = secondaryCompletionWeek(world, actor);
+  const partTimeOverlap = Math.max(0, Math.min(world.calendar.week, secondaryEnd) - startedWeek);
+  return elapsed - Math.min(elapsed, partTimeOverlap) * 0.5;
+}
+
 function processEducation(world: WorldState): void {
   const actor = player(world);
   const age = playerAgeYears(world);
-  let record = Object.values(world.education).find((item) => item.characterId === actor.id && !['completed', 'withdrawn', 'accepted'].includes(item.status));
-  if (!record && age >= 5 && age < 18) {
+  let records = Object.values(world.education).filter((item) => item.characterId === actor.id && !['completed', 'withdrawn', 'accepted'].includes(item.status));
+  const school = records.find((record) => record.status === 'school');
+  if (!school && age >= 5 && age < 18) {
     const id = allocateId(world, 'education');
-    record = {
+    const created = {
       id,
       characterId: actor.id,
       institutionId: 'organization-harborview-academy',
-      status: 'school',
+      status: 'school' as const,
       level: 'General studies',
       recordedGrade: 65,
       knowledgeGain: actor.knowledge,
@@ -197,31 +219,43 @@ function processEducation(world: WorldState): void {
       manipulatedCredential: false,
       startedWeek: world.calendar.week,
     };
-    world.education[id] = record;
+    world.education[id] = created;
+    records = [...records, created];
     addFeed(world, 'education', 'School begins', `${actor.firstName} enters Harborview Academy.`, true);
   }
-  if (!record) return;
-  if (record.tuitionCentsPerYear > 0) {
-    const tuition = Math.round(record.tuitionCentsPerYear / 52);
-    actor.cashCents = clampCents(actor.cashCents - tuition);
-    addTransaction(world, 'tuition', -tuition, `${record.level} tuition`, actor.id, record.institutionId);
-  }
-  const effort = actor.focuses.includes('Academics') ? 0.7 : -0.15;
-  const stability = (actor.mood - actor.stress) / 240;
-  record.recordedGrade = clamp(record.recordedGrade + effort + stability + range(world, -0.6, 0.6));
-  const knowledgeGrowth = Math.max(0, 0.08 + effort * 0.08 + (record.prestige - 50) / 900);
-  actor.knowledge = clamp(actor.knowledge + knowledgeGrowth);
-  record.knowledgeGain = actor.knowledge;
-  record.network = clamp(record.network + (actor.focuses.includes('Networking') ? 0.18 : 0.03));
-  if (age >= 18 && record.status === 'school') {
-    record.status = 'completed';
-    record.level = 'Secondary diploma';
-    addFeed(world, 'education', 'Graduation', `${actor.firstName} graduates with a ${record.recordedGrade >= 85 ? 'strong' : record.recordedGrade >= 70 ? 'solid' : 'mixed'} record.`, true);
-  }
-  const weeksEnrolled = world.calendar.week - (record.startedWeek ?? world.calendar.week);
-  if ((record.status === 'higher' && weeksEnrolled >= 208) || (record.status === 'trade' && weeksEnrolled >= 104)) {
-    record.status = 'completed';
-    addFeed(world, 'education', 'Program completed', `${actor.firstName} completes ${record.level}.`, true);
+  if (records.length === 0) return;
+
+  const hasActiveSecondarySchool = records.some((record) => record.status === 'school');
+  for (const record of records) {
+    if (record.tuitionCentsPerYear > 0) {
+      const tuition = Math.round(record.tuitionCentsPerYear / 52);
+      actor.cashCents = clampCents(actor.cashCents - tuition);
+      addTransaction(world, 'tuition', -tuition, `${record.level} tuition`, actor.id, record.institutionId);
+    }
+
+    const partTimePostsecondary = hasActiveSecondarySchool && ['higher', 'trade'].includes(record.status);
+    const loadFactor = partTimePostsecondary ? 0.5 : 1;
+    const effort = actor.focuses.includes('Academics') ? 0.7 : -0.15;
+    const stability = (actor.mood - actor.stress) / 240;
+    record.recordedGrade = clamp(record.recordedGrade + (effort + stability + range(world, -0.6, 0.6)) * loadFactor);
+    const knowledgeGrowth = Math.max(0, 0.08 + effort * 0.08 + (record.prestige - 50) / 900) * loadFactor;
+    actor.knowledge = clamp(actor.knowledge + knowledgeGrowth);
+    record.knowledgeGain = actor.knowledge;
+    record.network = clamp(record.network + (actor.focuses.includes('Networking') ? 0.18 : 0.03) * loadFactor);
+
+    if (age >= 18 && record.status === 'school') {
+      record.status = 'completed';
+      record.level = 'Secondary diploma';
+      addFeed(world, 'education', 'Graduation', `${actor.firstName} graduates with a ${record.recordedGrade >= 85 ? 'strong' : record.recordedGrade >= 70 ? 'solid' : 'mixed'} record.`, true);
+      continue;
+    }
+
+    if (record.startedWeek === undefined) continue;
+    const programWeeks = equivalentProgramWeeks(world, actor, record.startedWeek);
+    if ((record.status === 'higher' && programWeeks >= 208) || (record.status === 'trade' && programWeeks >= 104)) {
+      record.status = 'completed';
+      addFeed(world, 'education', 'Program completed', `${actor.firstName} completes ${record.level}.`, true);
+    }
   }
 }
 
@@ -368,7 +402,7 @@ function maybeGenerateEvent(world: WorldState): GameEvent | undefined {
   if (!actor.isAlive) return world.events.find((event) => !event.resolved);
   const age = playerAgeYears(world);
   const career = Object.values(world.careers).find((item) => item.characterId === actor.id && item.active);
-  const overloaded = Object.values(world.businesses).find((business) => business.active && business.demand > business.capacity * 1.2);
+  const overloaded = Object.values(world.businesses).find((business) => business.active && !business.delegated && business.demand > business.capacity * 1.2);
   const neglectedProperty = Object.values(world.properties).find((property) => property.ownerId === actor.id && property.condition < 42);
 
   if (overloaded && !hasUnresolvedTemplate(world, 'business.capacity')) {
@@ -420,7 +454,8 @@ function maybeGenerateEvent(world: WorldState): GameEvent | undefined {
       otherActionFamilies: ['career'],
     });
   }
-  if (age === 18 && world.calendar.week % 13 === 0 && !hasUnresolvedTemplate(world, 'education.next-step')) {
+  const alreadyInPostsecondary = Object.values(world.education).some((record) => record.characterId === actor.id && ['accepted', 'higher', 'trade'].includes(record.status));
+  if (age === 18 && !alreadyInPostsecondary && world.calendar.week % 13 === 0 && !hasUnresolvedTemplate(world, 'education.next-step')) {
     return addEvent(world, {
       templateId: 'education.next-step',
       domain: 'education',
@@ -905,8 +940,8 @@ function createStarterBusiness(world: WorldState, actor: Character): Business {
     name: `${actor.lastName} Services`,
     sector: 'Local services',
     cityId: actor.cityId,
-      founderId: actor.id,
-      ownerId: actor.id,
+    founderId: actor.id,
+    ownerId: actor.id,
     cashCents: capital,
     debtCents: 0,
     revenueWeeklyCents: 0,

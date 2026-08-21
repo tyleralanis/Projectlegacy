@@ -14,6 +14,10 @@ function activeEducation(world: WorldState, characterId: string) {
   return Object.values(world.education).find((record) => record.characterId === characterId && ['school', 'higher', 'trade'].includes(record.status));
 }
 
+function activeEducationRecords(world: WorldState, characterId: string) {
+  return Object.values(world.education).filter((record) => record.characterId === characterId && ['school', 'higher', 'trade'].includes(record.status));
+}
+
 function ageYears(world: WorldState): number {
   const actor = world.characters[world.playerCharacterId];
   return Math.max(0, Math.floor((world.calendar.week - actor.birthWeek) / 52));
@@ -71,19 +75,37 @@ export function getDeepTimeBudget(world: WorldState): TimeBudget {
   const actor = world.characters[world.playerCharacterId];
   const commitments = base.commitments.map((item) => ({ ...item }));
   const career = activeCareer(world, actor.id);
-  const education = activeEducation(world, actor.id);
+  const educations = activeEducationRecords(world, actor.id);
 
   if (career) {
     const hours = Math.max(8, Math.min(65, career.hoursPerWeek ?? 40));
     replaceCommitment(commitments, `career:${career.id}`, { id: `career:${career.id}`, label: career.title, hours, detail: hours > 44 ? 'The role consumes more than a standard workweek before commute, politics, and recovery.' : hours < 30 ? 'A reduced schedule leaves meaningful room for the rest of your life.' : 'Your regular job and the energy around it.' });
   }
 
-  if (education) {
-    const baseHours = education.status === 'school' ? 34 : education.status === 'trade' ? 38 : 30;
-    const extraAcademic = education.minor ? 5 : 0;
-    const research = Object.values(world.memories).some((memory) => memory.category === 'Education · Standout project' && memory.participantIds.includes(actor.id) && world.calendar.week - memory.week < 20) ? 3 : 0;
-    const sport = education.sport ? 9 : 0;
-    replaceCommitment(commitments, `education:${education.id}`, { id: `education:${education.id}`, label: education.status === 'school' ? 'School' : education.status === 'trade' ? 'Training' : education.major ? `College · ${education.major}` : 'College', hours: baseHours + extraAcademic + research + sport, detail: education.sport ? 'Classes, study, academic obligations, and a serious athletic schedule.' : 'Classes, assignments, studying, and ordinary attendance.' });
+  // The older budget only represented one education record. Rebuild education
+  // commitments so dual enrollment has both a real high-school load and a
+  // deliberately part-time college load until secondary school is complete.
+  for (let index = commitments.length - 1; index >= 0; index -= 1) {
+    if (commitments[index].id.startsWith('education:')) commitments.splice(index, 1);
+  }
+  const hasSecondarySchool = educations.some((education) => education.status === 'school');
+  for (const education of educations) {
+    const partTimePostsecondary = hasSecondarySchool && ['higher', 'trade'].includes(education.status);
+    const baseHours = education.status === 'school' ? 34 : partTimePostsecondary ? 16 : education.status === 'trade' ? 38 : 30;
+    const extraAcademic = education.status !== 'school' && education.minor ? (partTimePostsecondary ? 2 : 5) : 0;
+    const research = education.status !== 'school' && Object.values(world.memories).some((memory) => memory.category === 'Education · Standout project' && memory.participantIds.includes(actor.id) && world.calendar.week - memory.week < 20) ? (partTimePostsecondary ? 1 : 3) : 0;
+    const sport = education.sport ? (partTimePostsecondary ? 6 : 9) : 0;
+    const label = education.status === 'school' ? 'School' : education.status === 'trade' ? (partTimePostsecondary ? 'Training · part-time' : 'Training') : education.major ? `College · ${education.major}${partTimePostsecondary ? ' · part-time' : ''}` : `College${partTimePostsecondary ? ' · part-time' : ''}`;
+    replaceCommitment(commitments, `education:${education.id}`, {
+      id: `education:${education.id}`,
+      label,
+      hours: baseHours + extraAcademic + research + sport,
+      detail: partTimePostsecondary
+        ? 'Secondary school is still active, so this postsecondary path is limited to a part-time dual-enrollment load.'
+        : education.sport
+          ? 'Classes, study, academic obligations, and a serious athletic schedule.'
+          : 'Classes, assignments, studying, and ordinary attendance.',
+    });
     if (education.sport) removeCommitment(commitments, 'focus:sport');
   }
 
