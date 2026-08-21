@@ -15,7 +15,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -32,5 +32,22 @@ jobs:
         run: pnpm verify
       - name: Run acceptance stress suite
         run: pnpm test:stress
+      - name: Run internal balance QA
+        env:
+          BALANCE_QA_FULL: '1'
+          BALANCE_QA_LIVES: '2000'
+          BALANCE_QA_END_AGE: '60'
+          BALANCE_QA_LONG_LIVES: '110'
+        run: pnpm test:balance
+      - name: Upload balance QA dashboard
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: balance-qa-${{ github.sha }}
+          path: |
+            artifacts/balance-report.json
+            artifacts/balance-report.md
+          if-no-files-found: warn
+          retention-days: 30
       - name: Build web diagnostic bundle
         run: pnpm exec expo export --platform web --output-dir dist
