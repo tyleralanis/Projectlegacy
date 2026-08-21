@@ -5,6 +5,7 @@ import { applyContinuityPolish } from './continuityPolish';
 import { applyDelegationAdvance, executeDelegationDepth, prepareDelegationAdvance } from './delegationDepth';
 import { normalizeDelegatedWorld } from './delegationNormalize';
 import { executeSecondarySchoolApplication } from './educationApplicationBridge';
+import { applyFinanceEducationAdvance, executeFinanceEducationPolish, normalizeFinanceEducationState } from './financeEducationPolish';
 import { applyLegalPolish } from './legalPolish';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
 import { applyNarrativeDepth } from './narrativeDepth';
@@ -29,7 +30,8 @@ export { hasActiveLicense, licenseFor } from './wealthLifestyle';
 
 export function normalizeSupplementalState(source: WorldState): WorldState {
   const base = normalizeBaseSupplementalState(source);
-  const delegated = normalizeDelegatedWorld(base);
+  const financed = normalizeFinanceEducationState(base);
+  const delegated = normalizeDelegatedWorld(financed);
   const lifestyle = normalizeWealthLifestyleState(delegated);
   return normalizeAgeProgressionState(lifestyle);
 }
@@ -45,6 +47,8 @@ export function executeSupplementalDepth(
   if (lifestyle) return lifestyle;
   const property = executePropertyPolishAction(source, action);
   if (property) return property;
+  const financeEducation = executeFinanceEducationPolish(source, action, confirmed);
+  if (financeEducation) return financeEducation;
   const rebalance = executeRebalancePolish(source, action);
   if (rebalance) return rebalance;
   const polished = executeSystemPolishAction(source, action);
@@ -72,5 +76,6 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
   const polished = applySystemPolishAdvance(before, delegated);
   const continuous = applyContinuityPolish(before, polished);
   const legal = applyLegalPolish(before, continuous);
-  return normalizeAgeProgressionState(applyNarrativeDepth(before, legal));
+  const financed = applyFinanceEducationAdvance(before, legal);
+  return normalizeAgeProgressionState(applyNarrativeDepth(before, financed));
 }
