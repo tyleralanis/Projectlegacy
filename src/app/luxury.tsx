@@ -52,7 +52,7 @@ export default function LuxuryScreen() {
       {age >= 15 ? <View style={styles.section}>
         <SectionHeader title="Driving" />
         <Card>
-          <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">🚗 Driver's license</Heading><Body secondary>{driver?.status === 'active' ? 'Licensed.' : driver?.status === 'training' ? 'Training is underway.' : 'Start at 15. Finish the training and reach 16.'}</Body></View><StatusPill tone={driver?.status === 'active' ? 'success' : driver?.status === 'training' ? 'accent' : 'neutral'}>{driver?.status === 'active' ? 'Licensed' : driver?.status === 'training' ? 'Training' : '$1,200'}</StatusPill></View>
+          <View style={styles.row}><View style={{ flex: 1, gap: 3 }}><Heading size="small">🚗 Driver&apos;s license</Heading><Body secondary>{driver?.status === 'active' ? 'Licensed.' : driver?.status === 'training' ? 'Training is underway.' : 'Start at 15. Finish the training and reach 16.'}</Body></View><StatusPill tone={driver?.status === 'active' ? 'success' : driver?.status === 'training' ? 'accent' : 'neutral'}>{driver?.status === 'active' ? 'Licensed' : driver?.status === 'training' ? 'Training' : '$1,200'}</StatusPill></View>
           {driver?.status === 'training' ? <ProgressBar value={licenseProgress(world.calendar.week, driver.startedWeek, driver.requiredWeeks)} tone="success" /> : null}
           {!driver ? <EngineActionButton title="Start driver training · $1,200" action={{ verb: 'license.start_driver_training', targetIds: [], parameters: {} }} tone="accent" /> : null}
         </Card>
