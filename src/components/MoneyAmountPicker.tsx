@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatMoney } from '@/engine/money';
@@ -39,29 +39,22 @@ export function MoneyAmountPicker({
   const maximum = Math.max(0, Math.round(maxCents));
   const value = clampCents(valueCents, maximum);
   const [trackWidth, setTrackWidth] = useState(1);
-  const [draft, setDraft] = useState(() => draftFromCents(value));
+  const [draft, setDraft] = useState<string | null>(null);
   const percentage = maximum > 0 ? value / maximum : 0;
   const percentageLabel = Math.round(percentage * 100);
-
-  useEffect(() => {
-    setDraft(draftFromCents(value));
-  }, [value]);
+  const inputValue = draft ?? draftFromCents(value);
 
   const shortcuts = useMemo(() => [10, 25, 50, 100] as const, []);
   const updateFromX = (x: number) => {
     if (maximum <= 0) return;
     const next = clampCents(maximum * Math.max(0, Math.min(1, x / Math.max(1, trackWidth))), maximum);
+    setDraft(null);
     onChange(next);
   };
   const commitDraft = (text: string) => {
     const parsed = centsFromDraft(text);
-    if (parsed === null) {
-      setDraft(draftFromCents(value));
-      return;
-    }
-    const next = clampCents(parsed, maximum);
-    onChange(next);
-    setDraft(draftFromCents(next));
+    if (parsed !== null) onChange(clampCents(parsed, maximum));
+    setDraft(null);
   };
 
   return (
@@ -100,7 +93,10 @@ export function MoneyAmountPicker({
             accessibilityRole="button"
             accessibilityLabel={`Use ${percent === 100 ? 'maximum' : `${percent} percent`} of available liquidity`}
             disabled={maximum <= 0}
-            onPress={() => onChange(clampCents(maximum * percent / 100, maximum))}
+            onPress={() => {
+              setDraft(null);
+              onChange(clampCents(maximum * percent / 100, maximum));
+            }}
             style={({ pressed }) => [
               styles.shortcut,
               {
@@ -120,13 +116,14 @@ export function MoneyAmountPicker({
           <Text style={[styles.currencyMark, { color: colors.textSecondary }]}>$</Text>
           <TextInput
             accessibilityLabel={`${label} in dollars`}
-            value={draft}
+            value={inputValue}
             onChangeText={(text) => {
               setDraft(text);
               const parsed = centsFromDraft(text);
               if (parsed !== null) onChange(clampCents(parsed, maximum));
+              else if (text.trim() === '') onChange(0);
             }}
-            onBlur={() => commitDraft(draft)}
+            onBlur={() => commitDraft(inputValue)}
             keyboardType="decimal-pad"
             returnKeyType="done"
             selectTextOnFocus
