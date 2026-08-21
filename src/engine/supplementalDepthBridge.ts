@@ -72,12 +72,12 @@ export function applySupplementalAdvance(before: WorldState, after: WorldState):
   const aged = prepareAgeProgressionAdvance(before, after);
   const prepared = prepareDelegationAdvance(before, aged);
   const base = applyBaseSupplementalAdvance(before, prepared);
-  const faction = applyFactionPolishAdvance(before, base);
-  const ageProgressed = applyAgeProgressionAdvance(before, faction);
+  const ageProgressed = applyAgeProgressionAdvance(before, base);
   const lifestyle = applyWealthLifestyleAdvance(before, ageProgressed);
   const life = applyLifeSystemsAdvance(before, lifestyle);
   const delegated = applyDelegationAdvance(before, life);
-  const polished = applySystemPolishAdvance(before, delegated);
+  const faction = applyFactionPolishAdvance(before, delegated);
+  const polished = applySystemPolishAdvance(before, faction);
   const continuous = applyContinuityPolish(before, polished);
   const legal = applyLegalPolish(before, continuous);
   const financed = applyFinanceEducationAdvance(before, legal);
