@@ -59,6 +59,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:stress": "vitest run src/engine/__tests__/stress.test.ts --reporter=verbose",
+    "test:balance": "vitest run src/qa/__tests__/balanceHarness.test.ts --reporter=verbose",
     "validate:schemas": "node scripts/validate-schemas.mjs && node scripts/validate-life-systems.mjs",
     "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm validate:schemas",
     "prebuild:ios": "expo prebuild --platform ios --clean",
