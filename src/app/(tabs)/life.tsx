@@ -8,6 +8,7 @@ import { WORLD_CONTENT } from '@/content/worldContent';
 import { getOpenStoryThreads } from '@/engine/autonomousWorld';
 import { playerAgeYears } from '@/engine/createWorld';
 import { formatMoney, netWorthCents } from '@/engine/money';
+import { getNarrativeArcs, getRecentLifeTexture } from '@/engine/narrativeDepth';
 import { getActiveEvent } from '@/engine/simulation';
 import { getDeepTimeBudget } from '@/engine/timeSystem';
 import type { FocusArea } from '@/engine/types';
@@ -45,6 +46,15 @@ function storyTitle(category: string): string {
   return 'This is still unfolding';
 }
 
+function narrativeArcTitle(category: string): string {
+  const label = category.replace('Arc · Narrative · ', '');
+  if (label === 'Economic weather') return 'The economy is reaching several parts of your life';
+  if (label === 'Success has overhead') return 'Success is becoming its own workload';
+  if (label === 'Reputation under legal pressure') return 'The legal problem is spilling into reputation';
+  if (label === 'Body versus career') return 'Your body and your ambition are negotiating';
+  return label;
+}
+
 export default function LifeScreen() {
   const { world, lastSummary, setFocus } = useGame();
   const { colors } = useAppTheme();
@@ -56,6 +66,8 @@ export default function LifeScreen() {
   const country = WORLD_CONTENT.countries.find((item) => item.id === world.activeCountryId);
   const timeBudget = getDeepTimeBudget(world);
   const timeState = weekStatus(timeBudget.status);
+  const narrativeArcs = getNarrativeArcs(world);
+  const lifeTexture = getRecentLifeTexture(world, 2);
   const openStories = getOpenStoryThreads(world);
   const toggleFocus = (focus: FocusArea) => {
     const current = actor.focuses;
@@ -105,6 +117,18 @@ export default function LifeScreen() {
         </Pressable>
       ) : <Card accent><Eyebrow>NOTHING ON FIRE</Eyebrow><Heading size="small">The week is yours</Heading><Body secondary>Your priorities handle the ordinary stuff. The world handles making sure ordinary does not last forever.</Body></Card>}
 
+      {narrativeArcs.length > 0 ? <View style={styles.section}>
+        <SectionHeader title="Pressure & momentum" action={<StatusPill tone="warning">{narrativeArcs.length} active</StatusPill>} />
+        {narrativeArcs.slice(0, 3).map((memory) => <Card key={memory.id}>
+          <View style={styles.eventHeader}>
+            <View style={{ flex: 1, gap: 4 }}><Eyebrow>{memory.category.replace('Arc · Narrative · ', '').toUpperCase()}</Eyebrow><Heading size="small">{narrativeArcTitle(memory.category)}</Heading></View>
+            <StatusPill tone={memory.importance >= 78 ? 'danger' : memory.importance >= 64 ? 'warning' : 'accent'}>{memory.importance >= 78 ? 'Hot' : 'Building'}</StatusPill>
+          </View>
+          <Body secondary>{memory.narrative}</Body>
+        </Card>)}
+        <Body secondary>These are cross-system pressures. They close only when the underlying conditions actually improve.</Body>
+      </View> : null}
+
       {openStories.length > 0 ? <View style={styles.section}>
         <SectionHeader title="Ongoing stories" action={<StatusPill tone="warning">{openStories.length} open</StatusPill>} />
         {openStories.slice(0, 4).map((memory) => {
@@ -117,6 +141,12 @@ export default function LifeScreen() {
         })}
         <Body secondary>These do not disappear because a popup closed. They stay open until the underlying situation actually changes.</Body>
       </View> : null}
+
+      {lifeTexture.length > 0 ? <Card>
+        <Eyebrow>LIFE BETWEEN MILESTONES</Eyebrow>
+        {lifeTexture.map((memory) => <View key={memory.id} style={styles.textureRow}><View style={[styles.textureDot, { backgroundColor: colors.accent }]} /><Body secondary>{memory.narrative}</Body></View>)}
+        <Body secondary>Quiet years still count. These moments are drawn from the life you are actually living, not from a generic random-event deck.</Body>
+      </Card> : null}
 
       <View style={styles.section}>
         <SectionHeader title={age < 18 ? 'Life right now' : 'Do something'} />
@@ -156,6 +186,8 @@ const styles = StyleSheet.create({
   eventHeader: { flexDirection: 'row', gap: spacing.md, justifyContent: 'space-between', alignItems: 'flex-start' },
   section: { gap: spacing.md },
   commitmentRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
+  textureRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  textureDot: { width: 7, height: 7, borderRadius: 4, marginTop: 7 },
   focusWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   focusChip: { minHeight: 44, borderRadius: radius.pill, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 13, justifyContent: 'center' },
   focusText: { fontSize: 13, fontWeight: '700' },
