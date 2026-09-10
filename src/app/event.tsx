@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OtherActionComposer } from '@/components/OtherActionComposer';
@@ -18,8 +18,12 @@ export default function EventScreen() {
     return <SafeAreaView style={[styles.screen, { backgroundColor: colors.canvas }]}><Heading>No active decision</Heading><PrimaryButton title="Return to life" onPress={() => router.back()} /></SafeAreaView>;
   }
   const choose = async (choiceId: string) => {
-    await resolveActiveEvent(event.id, choiceId);
-    router.back();
+    try {
+      const resolved = await resolveActiveEvent(event.id, choiceId);
+      if (resolved) router.back();
+    } catch (error) {
+      Alert.alert('Decision not saved', error instanceof Error ? error.message : 'Please try again.');
+    }
   };
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.canvas }]}>
@@ -32,7 +36,7 @@ export default function EventScreen() {
             <Card key={choice.id}>
               <Heading size="small">{choice.label}</Heading>
               <Body secondary>{choice.detail}</Body>
-              <PrimaryButton title="Do it" tone={choice.tone === 'danger' ? 'danger' : 'accent'} disabled={busy} onPress={() => { void choose(choice.id); }} />
+              <PrimaryButton title={choice.label} accessibilityHint={choice.detail} tone={choice.tone === 'danger' ? 'danger' : 'accent'} disabled={busy} onPress={() => { void choose(choice.id); }} />
             </Card>
           ))}
         </View>

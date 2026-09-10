@@ -47,6 +47,7 @@ const nativeActionIds = new Set(actionIds);
 // the interpreter proposes structured intents, and the deterministic game engine validates
 // and mutates the world. Additions here must also have a real handler below.
 const otaOnlyActions = new Set([
+  'life.choose_plan', 'life.clear_plan', 'life.project_start', 'life.project_pause', 'life.project_resume', 'life.project_leave', 'relationship.keep_in_touch',
   'education.pay_tuition', 'education.party', 'education.sports',
   'business.hire_ceo', 'property.evict', 'markets.hire_wealth_manager',
   'health.run', 'health.gym', 'health.join_gym', 'health.group_class', 'health.therapy', 'health.outdoors',
@@ -80,6 +81,7 @@ const unknownGameActions = gameActionIds.filter((id) => !nativeActionIds.has(id)
 if (unknownGameActions.length > 0) throw new Error(`Game catalog actions are missing from the native registry or OTA allowlist: ${unknownGameActions.join(', ')}`);
 
 const executorFiles = [
+  path.join(root, 'src', 'engine', 'lifeJourney.ts'),
   path.join(root, 'src', 'engine', 'actions.ts'),
   path.join(root, 'src', 'engine', 'depthActions.ts'),
   path.join(root, 'src', 'engine', 'supplementalDepth.ts'),

@@ -48,6 +48,8 @@ export default function MoreScreen() {
     <AppScreen>
       <View style={styles.header}><View style={{ alignSelf: 'stretch', gap: 4 }}><Eyebrow>WORLD & DEVICE</Eyebrow><Heading size="large">More</Heading><Body secondary>Dynasty, health, law, organizations, saves, accessibility, and local intelligence.</Body></View><StatusPill tone="accent">v{PRODUCT.version}</StatusPill></View>
 
+      <Card><Heading size="small">Find your next step</Heading><PrimaryButton title="Life plans & personal projects" onPress={() => router.push('/plans' as never)} /><PrimaryButton title="How to play" tone="neutral" onPress={() => router.push('/guide' as never)} /></Card>
+
       <View style={styles.section}>
         <SectionHeader title="Dynasty" />
         <Card accent>

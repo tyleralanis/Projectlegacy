@@ -1,6 +1,8 @@
 import { netWorthCents } from './money';
 import type { WorldState } from './types';
 
+import { PERSONAL_PROJECTS } from '@/content/journeyCatalog';
+
 export interface InvariantViolation {
   code: string;
   message: string;
@@ -95,6 +97,35 @@ export function validateWorld(world: WorldState): InvariantViolation[] {
     }
   }
   finite(violations, netWorthCents(world), 'Player net worth', world.playerCharacterId);
+  if (world.journey) {
+    const projects = Object.values(world.journey.projects);
+    if (projects.length > 120) violations.push({ code: 'project_limit', message: 'The project journal exceeds its limit.' });
+    for (const [id, project] of Object.entries(world.journey.projects)) {
+      const invalid = id !== project.id || !world.characters[project.characterId] || !PERSONAL_PROJECTS.some((item) => item.id === project.catalogId)
+        || !['active', 'paused', 'completed', 'abandoned'].includes(project.status) || !['steady', 'stretch', 'shared'].includes(project.approach)
+        || typeof project.checkpointHandled !== 'boolean' || typeof project.update !== 'string'
+        || !Number.isInteger(project.hoursPerWeek) || project.hoursPerWeek < 1 || project.hoursPerWeek > 6
+        || !Number.isInteger(project.durationWeeks) || project.durationWeeks < 1 || project.durationWeeks > 16
+        || !Number.isInteger(project.completedWeeks) || project.completedWeeks < 0 || project.completedWeeks > project.durationWeeks
+        || !Number.isInteger(project.startedWeek) || project.startedWeek < 0 || project.startedWeek > world.calendar.week
+        || !Number.isInteger(project.lastProcessedWeek) || project.lastProcessedWeek < project.startedWeek || project.lastProcessedWeek > world.calendar.week
+        || (project.completedWeek !== undefined && (!Number.isInteger(project.completedWeek) || project.completedWeek < project.startedWeek || project.completedWeek > world.calendar.week))
+        || (project.status === 'completed' && (project.completedWeeks !== project.durationWeeks || project.completedWeek === undefined));
+      if (invalid) violations.push({ code: 'invalid_personal_project', message: 'The personal project contains invalid progress or references.', entityId: id });
+      if (['active', 'paused'].includes(project.status) && projects.filter((item) => item.characterId === project.characterId && ['active', 'paused'].includes(item.status)).length > 1) violations.push({ code: 'multiple_active_projects', message: 'A character can have only one unfinished personal project.', entityId: id });
+    }
+    const planIds = ['connections', 'independence', 'craft', 'career', 'community', 'legacy'];
+    for (const [characterId, planId] of Object.entries(world.journey.activePlans)) {
+      if (!world.characters[characterId] || !planIds.includes(planId)) violations.push({ code: 'invalid_life_plan', message: 'The selected life plan or character is invalid.' });
+    }
+    for (const [key, week] of Object.entries(world.journey.completedPlans)) {
+      const split = key.lastIndexOf(':');
+      if (!world.characters[key.slice(0, split)] || !planIds.includes(key.slice(split + 1)) || !Number.isInteger(week) || week < 0 || week > world.calendar.week) violations.push({ code: 'invalid_life_milestone', message: 'A recorded life milestone is invalid.' });
+    }
+    for (const [characterId, week] of Object.entries(world.journey.socialWeeks)) {
+      if (!world.characters[characterId] || !Number.isInteger(week) || week < 0 || week > world.calendar.week) violations.push({ code: 'invalid_social_week', message: 'The social catch-up record is invalid.' });
+    }
+  }
   return violations;
 }
 

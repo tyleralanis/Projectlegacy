@@ -144,6 +144,11 @@ export function getDeepTimeBudget(world: WorldState): TimeBudget {
   if (wealthHours >= 2) commitments.push({ id: 'wealth-admin', label: 'Managing the money', hours: Math.round(wealthHours), detail: hasFamilyOffice(world) ? 'A family office handles most paperwork and coordination, but you still make high-level capital decisions.' : 'Investments, properties, businesses, taxes, advisors, and liquidity create administrative work that scales with complexity.' });
 
   const capacityHours = baseCapacity(world);
+  for (const project of Object.values(world.journey?.projects ?? {})) {
+    if (project.characterId === actor.id && project.status === 'active') commitments.push({ id: `project:${project.id}`, label: 'Personal project', hours: project.hoursPerWeek, detail: 'A project you chose to make time for. You can pause it from Life plans.' });
+  }
+  const socialWeek = world.journey?.socialWeeks[actor.id];
+  if (socialWeek !== undefined && world.calendar.week - socialWeek >= 0 && world.calendar.week - socialWeek <= 1) commitments.push({ id: 'social-catch-up', label: 'Catching up with your circle', hours: 2, detail: 'Time for a round of short calls and messages to family and friends.' });
   const committedHours = commitments.reduce((sum, item) => sum + item.hours, 0);
   const freeHours = Math.max(0, capacityHours - committedHours);
   const overloadHours = Math.max(0, committedHours - capacityHours);

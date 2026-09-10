@@ -3,6 +3,7 @@ import { router, usePathname } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
+  AccessibilityInfo,
   Alert,
   Keyboard,
   Platform,
@@ -19,6 +20,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { ThemeBackdrop } from './ThemeAtmosphere';
 import { radius, spacing, useAppTheme } from './theme';
+import { contrastText } from './themeCatalog';
 
 import { getActiveEvent } from '@/engine/simulation';
 import { useGame } from '@/state/GameProvider';
@@ -33,6 +35,7 @@ export function AppScreen({ children, scroll = true }: { children: React.ReactNo
   const contentStyle = [styles.scrollContent, showFloatingBack && styles.scrollContentWithBack];
   const content = scroll ? (
     <ScrollView
+      style={{ flex: 1 }}
       automaticallyAdjustKeyboardInsets
       contentContainerStyle={contentStyle}
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
@@ -115,18 +118,19 @@ export function StatusPill({ children, tone = 'neutral' }: { children: React.Rea
   return <View style={[styles.pill, { borderColor: foreground }]}><Text style={[styles.pillText, { color: foreground }]}>{children}</Text></View>;
 }
 
-export function ProgressBar({ value, tone = 'accent' }: { value: number; tone?: 'accent' | 'success' | 'danger' | 'legacy' }) {
+export function ProgressBar({ value, tone = 'accent', label = 'Progress' }: { value: number; tone?: 'accent' | 'success' | 'danger' | 'legacy'; label?: string }) {
   const { colors } = useAppTheme();
   const foreground = tone === 'success' ? colors.success : tone === 'danger' ? colors.danger : tone === 'legacy' ? colors.legacy : colors.accent;
-  return <View style={[styles.progressTrack, { backgroundColor: colors.secondary }]}><View style={[styles.progressFill, { width: `${Math.max(0, Math.min(100, value))}%`, backgroundColor: foreground }]} /></View>;
+  const progress = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+  return <View accessible accessibilityRole="progressbar" accessibilityLabel={label} accessibilityValue={{ min: 0, max: 100, now: Math.round(progress), text: `${Math.round(progress)} percent` }} style={[styles.progressTrack, { backgroundColor: colors.secondary }]}><View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: foreground }]} /></View>;
 }
 
 export function PrimaryButton({ title, tone = 'accent', disabled, style, ...props }: PressableProps & { title: string; tone?: 'accent' | 'danger' | 'neutral'; style?: StyleProp<ViewStyle> }) {
   const { colors } = useAppTheme();
   const background = tone === 'danger' ? colors.danger : tone === 'neutral' ? colors.secondary : colors.accent;
-  const foreground = tone === 'neutral' ? colors.text : '#FFFFFF';
+  const foreground = tone === 'neutral' ? colors.text : contrastText(background);
   return (
-    <Pressable accessibilityRole="button" disabled={disabled} style={({ pressed }) => [styles.button, { backgroundColor: background, opacity: disabled ? 0.45 : pressed ? 0.78 : 1 }, style]} {...props}>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} disabled={disabled} style={({ pressed }) => [styles.button, { backgroundColor: background, opacity: disabled ? 0.45 : pressed ? 0.78 : 1 }, style]} {...props} accessibilityState={{ ...props.accessibilityState, disabled: Boolean(disabled) }}>
       <Text style={[styles.buttonText, { color: foreground }]}>{title}</Text>
     </Pressable>
   );
@@ -148,31 +152,36 @@ export function NoticeBanner() {
   const { error, message, clearNotice } = useGame();
   const { colors } = useAppTheme();
   const text = error ?? message;
+  React.useEffect(() => {
+    if (text && Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(text);
+  }, [text]);
   if (!text) return null;
   return (
     <SafeAreaView edges={['top']} pointerEvents="box-none" style={styles.noticeSafeArea}>
       <Pressable accessibilityRole="button" accessibilityLabel={`${error ? 'Error' : 'Notice'}: ${text}. Tap to dismiss.`} onPress={clearNotice} style={[styles.notice, { backgroundColor: error ? colors.danger : colors.surface, borderColor: error ? colors.danger : colors.border, shadowColor: colors.shadow }]}>
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[styles.noticeTitle, { color: error ? '#FFFFFF' : colors.text }]}>{error ? 'Something needs attention' : 'Update'}</Text>
-          <Text numberOfLines={2} style={[styles.noticeText, { color: error ? '#FFFFFF' : colors.textSecondary }]}>{text}</Text>
+          <Text style={[styles.noticeTitle, { color: error ? contrastText(colors.danger) : colors.text }]}>{error ? 'Something needs attention' : 'Update'}</Text>
+          <Text accessibilityLiveRegion="polite" style={[styles.noticeText, { color: error ? contrastText(colors.danger) : colors.textSecondary }]}>{text}</Text>
         </View>
-        <Text style={[styles.noticeDismiss, { color: error ? '#FFFFFF' : colors.accent }]}>Close</Text>
+        <Text style={[styles.noticeDismiss, { color: error ? contrastText(colors.danger) : colors.accent }]}>Close</Text>
       </Pressable>
     </SafeAreaView>
   );
 }
 
 const timeOptions = [
-  { label: '1W', weeks: 1 },
-  { label: '1M', weeks: 4 },
-  { label: '3M', weeks: 13 },
-  { label: '6M', weeks: 26 },
-  { label: '1Y', weeks: 52 },
+  { label: '1W', spoken: 'one week', weeks: 1 },
+  { label: '1M', spoken: 'one month', weeks: 4 },
+  { label: '3M', spoken: 'three months', weeks: 13 },
+  { label: '6M', spoken: 'six months', weeks: 26 },
+  { label: '1Y', spoken: 'one year', weeks: 52 },
 ] as const;
 
 function TimeTray() {
   const { world, busy, advance, activityFor } = useGame();
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
+  const pathname = usePathname();
   const [keyboardVisible, setKeyboardVisible] = React.useState(false);
 
   React.useEffect(() => {
@@ -188,6 +197,7 @@ function TimeTray() {
 
   if (!world || keyboardVisible) return null;
   const activeEvent = getActiveEvent(world);
+  const blocksAdvance = Boolean(activeEvent && activeEvent.templateId !== 'business.capacity');
   const onAdvance = (label: string, weeks: number) => {
     const activity = activityFor(weeks);
     if (weeks >= 26) {
@@ -199,20 +209,22 @@ function TimeTray() {
     } else void advance(weeks);
   };
   return (
-    <View style={[styles.timeTray, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.shadow }]}>
+    <View style={[styles.timeTray, { marginBottom: ROOT_TAB_PATHS.has(pathname) ? 4 : Math.max(4, insets.bottom), backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.shadow }]}>
       <View style={styles.timeTrayHeader}>
         <Eyebrow>ADVANCE TIME</Eyebrow>
-        {activeEvent ? <StatusPill tone="warning">Decision waiting</StatusPill> : null}
+        {activeEvent ? <PrimaryButton title="View decision" tone="neutral" onPress={() => router.push('/event')} /> : busy ? <Body secondary>Saving…</Body> : null}
       </View>
       <View style={styles.timeButtons}>
         {timeOptions.map((option) => (
           <Pressable
             key={option.label}
             accessibilityRole="button"
-            accessibilityLabel={`Advance ${option.label}, ${activityFor(option.weeks).toLowerCase()} activity`}
-            disabled={busy || Boolean(activeEvent)}
+            accessibilityLabel={`Advance ${option.spoken}, ${activityFor(option.weeks).toLowerCase()} activity`}
+            accessibilityHint={blocksAdvance ? 'Open the waiting decision to continue.' : 'Your choices and progress save automatically.'}
+            accessibilityState={{ disabled: busy || blocksAdvance, busy }}
+            disabled={busy || blocksAdvance}
             onPress={() => onAdvance(option.label, option.weeks)}
-            style={({ pressed }) => [styles.timeButton, { borderColor: colors.border, backgroundColor: pressed ? colors.accentSoft : colors.secondary, opacity: busy || activeEvent ? 0.38 : 1 }]}
+            style={({ pressed }) => [styles.timeButton, { borderColor: colors.border, backgroundColor: pressed ? colors.accentSoft : colors.secondary, opacity: busy || blocksAdvance ? 0.38 : 1 }]}
           >
             <Text style={[styles.timeButtonText, { color: colors.text }]}>{option.label}</Text>
           </Pressable>
@@ -224,9 +236,9 @@ function TimeTray() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, overflow: 'hidden' },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 132, gap: 16 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, gap: 16 },
   scrollContentWithBack: { paddingTop: 58 },
-  floatingBack: { position: 'absolute', left: 16, zIndex: 90, minHeight: 40, borderRadius: radius.pill, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, justifyContent: 'center', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 7 },
+  floatingBack: { position: 'absolute', left: 16, zIndex: 90, minHeight: 44, borderRadius: radius.pill, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, justifyContent: 'center', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 7 },
   floatingBackText: { fontSize: 13, lineHeight: 18, fontWeight: '800' },
   card: { borderRadius: radius.card, borderWidth: StyleSheet.hairlineWidth, padding: 16, gap: 12, shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
   eyebrow: { fontSize: 11, lineHeight: 15, fontWeight: '700', letterSpacing: 1.3 },
@@ -235,7 +247,7 @@ const styles = StyleSheet.create({
   headingLarge: { fontSize: 34, lineHeight: 40, letterSpacing: -0.8 },
   headingSmall: { fontSize: 17, lineHeight: 22, letterSpacing: -0.15 },
   body: { fontSize: 15, lineHeight: 21 },
-  sectionHeader: { minHeight: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  sectionHeader: { minHeight: 30, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   stat: { flex: 1, minWidth: 78, gap: 2 },
   statValue: { fontSize: 20, lineHeight: 25, fontWeight: '700', fontVariant: ['tabular-nums'] },
   statLabel: { fontSize: 11, lineHeight: 15, fontWeight: '600' },
@@ -243,8 +255,8 @@ const styles = StyleSheet.create({
   pillText: { fontSize: 11, lineHeight: 15, fontWeight: '700' },
   progressTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
-  button: { minHeight: 46, borderRadius: radius.md, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { fontSize: 15, lineHeight: 20, fontWeight: '700' },
+  button: { minHeight: 46, paddingVertical: 12, borderRadius: radius.md, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
+  buttonText: { textAlign: 'center', flexShrink: 1, fontSize: 15, lineHeight: 20, fontWeight: '700' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24 },
   loadingMark: { width: 42, height: 42, borderRadius: 14, transform: [{ rotate: '45deg' }] },
   noticeSafeArea: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100 },
@@ -252,8 +264,8 @@ const styles = StyleSheet.create({
   noticeTitle: { fontSize: 12, lineHeight: 16, fontWeight: '800' },
   noticeText: { fontSize: 13, lineHeight: 18, fontWeight: '600' },
   noticeDismiss: { fontSize: 11, fontWeight: '800' },
-  timeTray: { position: 'absolute', left: 12, right: 12, bottom: 4, borderWidth: StyleSheet.hairlineWidth, borderRadius: 18, padding: 10, gap: 8, shadowOpacity: 0.14, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
-  timeTrayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
+  timeTray: { marginHorizontal: 12, borderWidth: StyleSheet.hairlineWidth, borderRadius: 18, padding: 10, gap: 8, shadowOpacity: 0.14, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  timeTrayHeader: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
   timeButtons: { flexDirection: 'row', gap: 7 },
   timeButton: { flex: 1, minHeight: 44, borderRadius: 10, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
   timeButtonText: { fontSize: 13, fontWeight: '800', fontVariant: ['tabular-nums'] },

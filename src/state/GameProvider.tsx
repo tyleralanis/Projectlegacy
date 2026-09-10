@@ -33,7 +33,7 @@ interface GameContextValue {
   saves: SaveSlotSummary[];
   checkpoints: RecoveryCheckpointSummary[];
   advance(weeks: number): Promise<void>;
-  resolveActiveEvent(eventId: string, choiceId: string): Promise<void>;
+  resolveActiveEvent(eventId: string, choiceId: string): Promise<boolean>;
   performAction(action: IntentAction, confirmed?: boolean): Promise<{ completed: boolean; message: string; requiresConfirmation: boolean; explanation?: OutcomeExplanation }>;
   newLife(options: NewLifeOptions): Promise<void>;
   exportSave(): Promise<string>;
@@ -58,6 +58,7 @@ const GameContext = createContext<GameContextValue | null>(null);
 export function GameProvider({ children }: React.PropsWithChildren) {
   const repositoryRef = useRef<GameRepository | null>(null);
   const worldRef = useRef<WorldState | null>(null);
+  const operationInFlight = useRef(false);
   const [world, setWorld] = useState<WorldState | null>(null);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -114,6 +115,8 @@ export function GameProvider({ children }: React.PropsWithChildren) {
   }, []);
 
   const runBusy = useCallback(async <T,>(operation: () => Promise<T>): Promise<T> => {
+    if (operationInFlight.current) throw new Error('Another change is still being saved. Please try again in a moment.');
+    operationInFlight.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -123,12 +126,14 @@ export function GameProvider({ children }: React.PropsWithChildren) {
       setError(detail);
       throw caught;
     } finally {
+      operationInFlight.current = false;
       setBusy(false);
     }
   }, []);
 
   const advance = useCallback(async (weeks: number) => {
-    if (!world) return;
+    const world = worldRef.current;
+    if (!world || operationInFlight.current) return;
     await runBusy(async () => {
       const beforeCash = world.characters[world.playerCharacterId].cashCents;
       const beforeWorth = netWorthCents(world);
@@ -144,15 +149,16 @@ export function GameProvider({ children }: React.PropsWithChildren) {
         await Haptics.notificationAsync(result.summary.interruptedByEventId ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success);
       }
     });
-  }, [persist, runBusy, world]);
+  }, [persist, runBusy]);
 
   const resolveActiveEvent = useCallback(async (eventId: string, choiceId: string) => {
-    if (!world) return;
-    await runBusy(async () => {
+    const world = worldRef.current;
+    if (!world || operationInFlight.current) return false;
+    return runBusy(async () => {
       const event = world.events.find((item) => item.id === eventId && !item.resolved);
       if (!event) {
         setMessage('That decision is no longer active.');
-        return;
+        return false;
       }
 
       let capacityBusinessId: string | undefined;
@@ -165,12 +171,12 @@ export function GameProvider({ children }: React.PropsWithChildren) {
             const hiringCost = hires * 175_000;
             if (business.cashCents < hiringCost) {
               setMessage(`${business.name} needs ${(hiringCost / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })} in company cash to make that hiring move. Add capital, borrow, raise funds, or choose another response.`);
-              return;
+              return false;
             }
           }
           if (choiceId === 'delegate' && business.cashCents < 250_000) {
             setMessage(`${business.name} needs $2,500 in company cash to put day-to-day operations under management.`);
-            return;
+            return false;
           }
         }
       }
@@ -191,11 +197,14 @@ export function GameProvider({ children }: React.PropsWithChildren) {
 
       await persist(next);
       setMessage('Your decision is now part of the world.');
-      if (world.settings.hapticsEnabled) await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      if (world.settings.hapticsEnabled) await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+      return true;
     });
-  }, [persist, runBusy, world]);
+  }, [persist, runBusy]);
 
   const performAction = useCallback(async (action: IntentAction, confirmed = false) => {
+    const world = worldRef.current;
+    if (operationInFlight.current) return { completed: false, message: 'Your last change is still saving. Please try again in a moment.', requiresConfirmation: false };
     if (!world) return { completed: false, message: 'The world is not ready.', requiresConfirmation: false };
 
     if (action.verb === 'organization.create') {
@@ -287,7 +296,7 @@ export function GameProvider({ children }: React.PropsWithChildren) {
       if (world.settings.hapticsEnabled) await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     });
     return { completed: true, message: result.message, requiresConfirmation: false, explanation: result.explanation };
-  }, [persist, runBusy, world]);
+  }, [persist, runBusy]);
 
   const newLife = useCallback(async (options: NewLifeOptions) => {
     await runBusy(async () => {

@@ -1,5 +1,6 @@
 import { addWeeksISO, allocateId, playerAgeYears } from './createWorld';
 import { explain, recordHistory } from './history';
+import { resolveProjectCheckpoint, tickLifeJourney } from './lifeJourney';
 import { clampCents, netWorthCents } from './money';
 import { normalizeSimulationDetail, shouldSimulateNpcThisWeek, updateBackgroundStatistics } from './performance';
 import { nextRandom, randomBetween } from './random';
@@ -642,6 +643,7 @@ export function advanceWorld(source: WorldState, requestedWeeks: number, options
     processEducation(world);
     processHealthAndRelationships(world);
     processPoliticsAndLegal(world);
+    tickLifeJourney(world);
     updateBackgroundStatistics(world);
     if (world.calendar.week % 13 === 0) normalizeSimulationDetail(world);
 
@@ -701,6 +703,7 @@ function resolveEventMutable(world: WorldState, event: GameEvent, choiceId: stri
   if (!choice) throw new Error('That choice is not available for this event.');
   event.resolved = true;
   event.selectedChoiceId = choiceId;
+  resolveProjectCheckpoint(world, event, choiceId);
 
   switch (event.templateId) {
     case 'career.promotion': {

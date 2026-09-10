@@ -8,6 +8,7 @@ import { executeSecondarySchoolApplication } from './educationApplicationBridge'
 import { applyFactionPolishAdvance, executeFactionPolish } from './factionPolish';
 import { applyFinanceEducationAdvance, executeFinanceEducationPolish, normalizeFinanceEducationState } from './financeEducationPolish';
 import { applyLegalPolish } from './legalPolish';
+import { executeJourneyAction } from './lifeJourney';
 import { applyLifeSystemsAdvance, executeLifeSystemsDepth } from './lifeSystemsDepth';
 import { applyNarrativeDepth } from './narrativeDepth';
 import { executePropertyPolishAction } from './propertyPolishActions';
@@ -44,6 +45,8 @@ export function executeSupplementalDepth(
 ): ActionResult | null {
   const ageGate = executeAgeActionGate(source, action);
   if (ageGate) return ageGate;
+  const journey = executeJourneyAction(source, action, confirmed);
+  if (journey) return journey;
   const lifestyle = executeWealthLifestyleAction(source, action);
   if (lifestyle) return lifestyle;
   const property = executePropertyPolishAction(source, action);

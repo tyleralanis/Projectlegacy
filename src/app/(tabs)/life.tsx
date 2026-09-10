@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { LifePlanCard } from '@/components/LifePlanCard';
 import { MenuTile } from '@/components/MenuTile';
 import { WhyCard } from '@/components/WhyCard';
 import { WORLD_CONTENT } from '@/content/worldContent';
@@ -57,6 +58,8 @@ function narrativeArcTitle(category: string): string {
 export default function LifeScreen() {
   const { world, lastSummary, setFocus } = useGame();
   const { colors } = useAppTheme();
+  const [expandedStories, setExpandedStories] = useState(false);
+  const [expandedFeed, setExpandedFeed] = useState(false);
   if (!world) return null;
   const actor = world.characters[world.playerCharacterId];
   const activeEvent = getActiveEvent(world);
@@ -120,9 +123,11 @@ export default function LifeScreen() {
         </Pressable>
       ) : age >= 8 ? <Card accent><Eyebrow>NOTHING ON FIRE</Eyebrow><Heading size="small">The week is yours</Heading><Body secondary>Nothing needs an immediate decision.</Body></Card> : null}
 
+      <LifePlanCard />
+
       {narrativeArcs.length > 0 && age >= 8 ? <View style={styles.section}>
         <SectionHeader title="Pressure & momentum" action={<StatusPill tone="warning">{narrativeArcs.length} active</StatusPill>} />
-        {narrativeArcs.slice(0, 3).map((memory) => <Card key={memory.id}>
+        {narrativeArcs.slice(0, expandedStories ? 3 : 1).map((memory) => <Card key={memory.id}>
           <View style={styles.eventHeader}>
             <View style={{ flex: 1, gap: 4 }}><Eyebrow>{memory.category.replace('Arc · Narrative · ', '').toUpperCase()}</Eyebrow><Heading size="small">{narrativeArcTitle(memory.category)}</Heading></View>
             <StatusPill tone={memory.importance >= 78 ? 'danger' : memory.importance >= 64 ? 'warning' : 'accent'}>{memory.importance >= 78 ? 'Hot' : 'Building'}</StatusPill>
@@ -133,7 +138,7 @@ export default function LifeScreen() {
 
       {openStories.length > 0 && age >= 8 ? <View style={styles.section}>
         <SectionHeader title="Ongoing stories" action={<StatusPill tone="warning">{openStories.length} open</StatusPill>} />
-        {openStories.slice(0, 4).map((memory) => {
+        {openStories.slice(0, expandedStories ? 4 : 1).map((memory) => {
           const label = memory.category.replace('Thread · ', '');
           const people = memory.participantIds.filter((id) => id !== actor.id).map((id) => world.characters[id]?.firstName).filter(Boolean).slice(0, 2).join(' & ');
           return <Card key={memory.id}>
@@ -142,6 +147,8 @@ export default function LifeScreen() {
           </Card>;
         })}
       </View> : null}
+
+      {narrativeArcs.length > 1 || openStories.length > 1 ? <PrimaryButton title={expandedStories ? 'Show fewer ongoing stories' : 'Show more ongoing stories'} tone="neutral" accessibilityState={{ expanded: expandedStories }} onPress={() => setExpandedStories((value) => !value)} /> : null}
 
       {lifeTexture.length > 0 ? <Card>
         <Eyebrow>LIFE BETWEEN MILESTONES</Eyebrow>
@@ -179,8 +186,9 @@ export default function LifeScreen() {
 
       <View style={styles.section}>
         <SectionHeader title="Your life so far" />
-        {world.feed.slice(0, 14).map((entry, index) => <View key={entry.id} style={styles.feedRow}><View style={[styles.feedRail, { backgroundColor: entry.important ? colors.legacy : colors.border }]} /><View style={{ flex: 1, gap: 5, paddingBottom: 12 }}><View style={styles.eventHeader}><Eyebrow>{entry.domain.toUpperCase()} · WEEK {entry.week}</Eyebrow>{index === 0 ? <StatusPill>Latest</StatusPill> : null}</View><Heading size="small">{entry.title}</Heading><Body secondary>{entry.detail}</Body></View></View>)}
+        {world.feed.slice(0, expandedFeed ? 14 : 5).map((entry, index) => <View key={entry.id} style={styles.feedRow}><View style={[styles.feedRail, { backgroundColor: entry.important ? colors.legacy : colors.border }]} /><View style={{ flex: 1, gap: 5, paddingBottom: 12 }}><View style={styles.eventHeader}><Eyebrow>{entry.domain.toUpperCase()} · WEEK {entry.week}</Eyebrow>{index === 0 ? <StatusPill>Latest</StatusPill> : null}</View><Heading size="small">{entry.title}</Heading><Body secondary>{entry.detail}</Body></View></View>)}
       </View>
+      {world.feed.length > 5 ? <PrimaryButton title={expandedFeed ? 'Show fewer life entries' : 'Show more life entries'} tone="neutral" accessibilityState={{ expanded: expandedFeed }} onPress={() => setExpandedFeed((value) => !value)} /> : null}
     </AppScreen>
   );
 }

@@ -10,6 +10,13 @@ export interface ActionDefinition {
 }
 
 export const ACTION_CATALOG: ActionDefinition[] = [
+  { id: 'life.choose_plan', domain: 'life', label: 'Follow a life plan', summary: 'Choose a direction and track meaningful milestones.' },
+  { id: 'life.clear_plan', domain: 'life', label: 'Set a plan aside', summary: 'Stop following a plan while retaining completed milestones.' },
+  { id: 'life.project_start', domain: 'life', label: 'Start a personal project', summary: 'Commit weekly time and any upfront materials to a multiweek project.' },
+  { id: 'life.project_pause', domain: 'life', label: 'Pause a project', summary: 'Free weekly time while preserving progress.' },
+  { id: 'life.project_resume', domain: 'life', label: 'Resume a project', summary: 'Return a paused project to the weekly schedule.' },
+  { id: 'life.project_leave', domain: 'life', label: 'Leave a project', summary: 'Abandon an unfinished project without a materials refund.', destructive: true, confirmationMandatory: true },
+  { id: 'relationship.keep_in_touch', domain: 'relationship', label: 'Catch up with your circle', summary: 'Spend two hours reconnecting with up to five living family members and friends once a week.' },
   { id: 'relationship.contact', domain: 'relationship', label: 'Reach out', summary: 'Contact someone in your network.' },
   { id: 'relationship.spend_time', domain: 'relationship', label: 'Spend time', summary: 'Invest time in a relationship.' },
   { id: 'relationship.date', domain: 'relationship', label: 'Ask on a date', summary: 'Explore a partnership with an eligible person.' },

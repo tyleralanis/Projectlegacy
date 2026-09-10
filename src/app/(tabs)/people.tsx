@@ -6,6 +6,7 @@ import { EngineActionButton } from '@/components/EngineActionButton';
 import { OtherActionComposer } from '@/components/OtherActionComposer';
 import { playerAgeYears } from '@/engine/createWorld';
 import { relationshipPortrait } from '@/engine/immersionWorld';
+import { socialCircle } from '@/engine/lifeJourney';
 import { relationshipNeed } from '@/engine/relationshipDepth';
 import { useGame } from '@/state/GameProvider';
 import { AppScreen, Body, Card, Eyebrow, Heading, ProgressBar, SectionHeader, StatusPill } from '@/ui/components';
@@ -70,7 +71,7 @@ export default function PeopleScreen() {
     const shown = relationships.filter((item) => item.group === selected);
     return (
       <AppScreen>
-        <Pressable onPress={() => setSelected(null)} style={[styles.back, { backgroundColor: colors.secondary }]}><Text style={[styles.backText, { color: colors.text }]}>‹ People</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setSelected(null)} style={[styles.back, { backgroundColor: colors.secondary }]}><Text style={[styles.backText, { color: colors.text }]}>‹ People</Text></Pressable>
         <View style={styles.header}><Eyebrow>{definition.icon} {definition.title.toUpperCase()}</Eyebrow><Heading size="large">{definition.title}</Heading><Body secondary>{definition.subtitle}</Body></View>
         <View style={styles.section}>
           {shown.length === 0 ? <Card><Heading size="small">Nobody here yet</Heading><Body secondary>Life will put more people in your orbit over time.</Body></Card> : shown.map(({ relationship, person, kind }) => {
@@ -104,7 +105,7 @@ export default function PeopleScreen() {
                 </View>
 
                 {person.isAlive && !caregiverManaged ? <>
-                  <Pressable onPress={() => router.push({ pathname: '/relationship', params: { personId: person.id } } as never)} style={({ pressed }) => [styles.focusButton, { backgroundColor: colors.accentSoft, borderColor: colors.accent, opacity: pressed ? 0.74 : 1 }]}><View style={{ flex: 1 }}><Heading size="small">Open the relationship</Heading><Body secondary>Spend time, repair conflict, support goals, or handle bigger decisions.</Body></View><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></Pressable>
+                  <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/relationship', params: { personId: person.id } } as never)} style={({ pressed }) => [styles.focusButton, { backgroundColor: colors.accentSoft, borderColor: colors.accent, opacity: pressed ? 0.74 : 1 }]}><View style={{ flex: 1 }}><Heading size="small">Open the relationship</Heading><Body secondary>Spend time, repair conflict, support goals, or handle bigger decisions.</Body></View><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></Pressable>
                   <View style={styles.actions}>
                     <EngineActionButton title={age < 13 ? 'Talk' : 'Reach out'} action={{ verb: 'relationship.contact', targetIds: [person.id], parameters: {} }} style={{ flex: 1 }} />
                     <EngineActionButton title="Spend time" action={{ verb: 'relationship.spend_time', targetIds: [person.id], parameters: {} }} tone="accent" style={{ flex: 1 }} />
@@ -124,10 +125,17 @@ export default function PeopleScreen() {
       <View style={styles.header}><Eyebrow>{age < 13 ? 'YOUR PEOPLE' : 'PEOPLE'}</Eyebrow><Heading size="large">People</Heading><Body secondary>{age < 8 ? 'The adults around you still shape most of your social world.' : 'Family, friends, partners, coworkers, acquaintances, and rivals.'}</Body></View>
       <Card accent><SectionHeader title={`${world.dynasty.familyName} family`} action={<StatusPill tone="warning">Generation {world.dynasty.generation}</StatusPill>} /><Body>{actor.parentIds.length} parents · {actor.childIds.length} children · {age >= 16 ? (actor.partnerId ? 'Partnered' : 'Single') : 'Still growing up'}</Body></Card>
 
+      {age >= 8 ? <Card>
+        <Heading size="small">Keep in touch</Heading>
+        <Body secondary>Catch up with up to five living family members and friends, starting with those you have not spoken to recently. Two hours for short calls and messages; serious issues still need a personal conversation.</Body>
+        {socialCircle(world).length ? <Body secondary>Next: {socialCircle(world).map((link) => world.characters[link.characterIds.find((id) => id !== actor.id)!].firstName).join(', ')}</Body> : null}
+        {world.journey?.socialWeeks[actor.id] === world.calendar.week ? <StatusPill tone="success">Caught up this week</StatusPill> : <EngineActionButton title="Catch up with my circle" tone="accent" action={{ verb: 'relationship.keep_in_touch', targetIds: [], parameters: {} }} />}
+      </Card> : null}
+
       <View style={styles.section}>
         {availableGroups.map((group) => {
           const count = relationships.filter((item) => item.group === group.id).length;
-          return <Pressable key={group.id} onPress={() => setSelected(group.id)} style={({ pressed }) => [styles.groupTile, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.75 : 1 }]}><View style={[styles.icon, { backgroundColor: colors.accentSoft }]}><Text style={styles.iconText}>{group.icon}</Text></View><View style={{ flex: 1, gap: 3 }}><Heading size="small">{group.title}</Heading><Body secondary>{group.subtitle}</Body></View><View style={{ alignItems: 'center', gap: 2 }}><StatusPill tone={count > 0 ? 'accent' : 'neutral'}>{count}</StatusPill><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></View></Pressable>;
+          return <Pressable key={group.id} accessibilityRole="button" accessibilityLabel={`${group.title}, ${count} people`} onPress={() => setSelected(group.id)} style={({ pressed }) => [styles.groupTile, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.75 : 1 }]}><View style={[styles.icon, { backgroundColor: colors.accentSoft }]}><Text style={styles.iconText}>{group.icon}</Text></View><View style={{ flex: 1, gap: 3 }}><Heading size="small">{group.title}</Heading><Body secondary>{group.subtitle}</Body></View><View style={{ alignItems: 'center', gap: 2 }}><StatusPill tone={count > 0 ? 'accent' : 'neutral'}>{count}</StatusPill><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></View></Pressable>;
         })}
       </View>
 
@@ -154,6 +162,6 @@ const styles = StyleSheet.create({
   icon: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   iconText: { fontSize: 25 },
   chevron: { fontSize: 26, lineHeight: 26 },
-  back: { alignSelf: 'flex-start', minHeight: 38, borderRadius: radius.pill, paddingHorizontal: 12, justifyContent: 'center', marginTop: 4 },
+  back: { alignSelf: 'flex-start', minHeight: 44, borderRadius: radius.pill, paddingHorizontal: 12, justifyContent: 'center', marginTop: 4 },
   backText: { fontSize: 13, fontWeight: '700' },
 });

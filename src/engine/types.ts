@@ -142,7 +142,32 @@ export interface LicenseRecord {
 }
 
 export interface WorldState {
+  /** Additive local journal; absent in older saves and independent of the native runtime. */
+  journey?: JourneyState;
   metadata: WorldMetadata; calendar: CalendarState; rngState: number; playerCharacterId: EntityId; economy: EconomyState; characters: Record<EntityId, Character>; relationships: Record<EntityId, Relationship>; memories: Record<EntityId, MemoryRecord>; education: Record<EntityId, EducationState>; careers: Record<EntityId, CareerState>; organizations: Record<EntityId, Organization>; businesses: Record<EntityId, Business>; properties: Record<EntityId, PropertyAsset>; securities: Record<EntityId, Security>; holdings: Record<EntityId, Holding>; liabilities: Record<EntityId, Liability>; politics: Record<EntityId, PoliticalState>; exposures: Record<EntityId, LegalExposure>; legalCases: Record<EntityId, LegalCase>; transactions: TransactionRecord[]; events: GameEvent[]; feed: FeedEntry[]; timeline: TimelineEntry[]; favorites: FavoriteRef[]; intentHistory: IntentAuditEntry[]; countries: Record<EntityId, CountryState>; activeCountryId: EntityId; background: BackgroundSimulationState; performance: PerformanceBudgetState; dynasty: DynastyState; settings: GameSettings; advisors?: Record<EntityId, AdvisorServiceState>; personalAssets?: Record<EntityId, PersonalAsset>; licenses?: Record<EntityId, LicenseRecord>;
+}
+
+export type LifePlanId = 'connections' | 'independence' | 'craft' | 'career' | 'community' | 'legacy';
+export interface PersonalProject {
+  id: EntityId;
+  characterId: EntityId;
+  catalogId: string;
+  startedWeek: number;
+  lastProcessedWeek: number;
+  completedWeeks: number;
+  durationWeeks: number;
+  hoursPerWeek: number;
+  status: 'active' | 'paused' | 'completed' | 'abandoned';
+  approach: 'steady' | 'stretch' | 'shared';
+  checkpointHandled: boolean;
+  completedWeek?: number;
+  update: string;
+}
+export interface JourneyState {
+  projects: Record<EntityId, PersonalProject>;
+  activePlans: Record<EntityId, LifePlanId>;
+  completedPlans: Record<string, number>;
+  socialWeeks: Record<EntityId, number>;
 }
 
 export interface AdvanceSummary { requestedWeeks: number; advancedWeeks: number; startWeek: number; endWeek: number; cashDeltaCents: MoneyCents; netWorthDeltaCents: MoneyCents; highlights: string[]; delegatedDecisions: string[]; missedOpportunities: string[]; consequences: string[]; explanation?: OutcomeExplanation; interruptedByEventId?: EntityId; }
